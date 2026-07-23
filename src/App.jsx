@@ -107,8 +107,15 @@ function styles(th) {
     linkBtn: { background: 'none', border: 'none', color: th.subt, cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0 },
     linkBtnDanger: { background: 'none', border: 'none', color: th.salsaD, cursor: 'pointer', fontSize: 12, fontWeight: 700, textDecoration: 'underline', padding: 0 },
     modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
-    modalCard: { background: th.card, color: th.text, borderRadius: '20px 20px 0 0', padding: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' },
+    modalCard: { background: th.card, color: th.text, borderRadius: '20px 20px 0 0', padding: '14px 20px calc(20px + env(safe-area-inset-bottom))', width: '100%', maxWidth: 480, maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
+    sheetHandle: { width: 40, height: 5, borderRadius: 3, background: th.line, margin: '0 auto 12px' },
     modalTitle: { fontFamily: 'Rye, serif', fontSize: 18, marginBottom: 14 },
+    photoBtnRow: { display: 'flex', gap: 10 },
+    photoBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, background: th.cardSoft, color: th.text, border: `1px dashed ${th.line}`, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+    photoFrame: { position: 'relative', marginTop: 4 },
+    photoImg: { width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 12, display: 'block' },
+    photoRemove: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 },
+    hiddenFile: { position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' },
     fieldLabel: { fontWeight: 700, fontSize: 13, marginTop: 14, marginBottom: 4, color: th.subt },
     autocompleteBox: { position: 'absolute', top: '100%', left: 0, right: 0, background: th.card, border: `1px solid ${th.line}`, borderRadius: 10, marginTop: 4, zIndex: 20, maxHeight: 200, overflowY: 'auto' },
     autocompleteRow: { padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: `1px solid ${th.line}` },
@@ -622,8 +629,11 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
   const [near, setNear] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(initial?.photoUrl || null)
+  const [photoCleared, setPhotoCleared] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
+  const cameraRef = useRef(null)
+  const libraryRef = useRef(null)
 
   function handleNearMe() {
     if (!navigator.geolocation) return
@@ -643,6 +653,15 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
     if (!file) return
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setPhotoCleared(false)
+  }
+
+  function removePhoto() {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setPhotoCleared(true)
+    if (cameraRef.current) cameraRef.current.value = ''
+    if (libraryRef.current) libraryRef.current.value = ''
   }
 
   async function submit() {
@@ -657,6 +676,7 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
           ...(mode === 'edit' ? { ts: initial.ts } : {}),
         },
         photoFile,
+        photoCleared,
       )
     } finally {
       setSaving(false)
@@ -666,6 +686,7 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
   return (
     <div style={S.modalOverlay} onMouseDown={onCancel}>
       <div style={S.modalCard} onMouseDown={(e) => e.stopPropagation()}>
+        <div style={S.sheetHandle} />
         <div style={S.modalTitle}>{mode === 'edit' ? 'Edit taco ✏️' : 'Log a Taco 🌮'}</div>
 
         <div style={S.fieldLabel}>Rating</div>
@@ -685,8 +706,25 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
         </button>
 
         <div style={S.fieldLabel}>Photo</div>
-        <input type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} />
-        {photoPreview && <img src={photoPreview} style={S.photoPreview} alt="" />}
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} style={S.hiddenFile} tabIndex={-1} />
+        <input ref={libraryRef} type="file" accept="image/*" onChange={handlePhotoChange} style={S.hiddenFile} tabIndex={-1} />
+        {!photoPreview ? (
+          <div style={S.photoBtnRow}>
+            <button type="button" style={S.photoBtn} onClick={() => cameraRef.current?.click()}>
+              📷 Take photo
+            </button>
+            <button type="button" style={S.photoBtn} onClick={() => libraryRef.current?.click()}>
+              🖼️ Choose photo
+            </button>
+          </div>
+        ) : (
+          <div style={S.photoFrame}>
+            <img src={photoPreview} style={S.photoImg} alt="" />
+            <button type="button" style={S.photoRemove} onClick={removePhoto} aria-label="Remove photo">
+              ✕
+            </button>
+          </div>
+        )}
 
         <div style={S.fieldLabel}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -700,11 +738,11 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
         </div>
         <textarea style={S.textarea} value={notes} maxLength={NOTES_MAX} onChange={(e) => setNotes(e.target.value)} placeholder="al pastor, no cilantro..." />
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          <button style={S.primaryBtn} onClick={submit} disabled={saving}>
-            {mode === 'edit' ? 'Save changes' : 'Log it 🔥'}
+        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <button style={{ ...S.primaryBtn, flex: 2, minHeight: 50, fontSize: 15 }} onClick={submit} disabled={saving}>
+            {saving ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Log it 🔥'}
           </button>
-          <button style={S.ghostBtn} onClick={onCancel}>
+          <button style={{ ...S.ghostBtn, flex: 1, minHeight: 50 }} onClick={onCancel}>
             Cancel
           </button>
         </div>
@@ -1391,7 +1429,7 @@ export default function App() {
     triggerRain()
   }
 
-  async function handleEditSubmit(draft, photoFile) {
+  async function handleEditSubmit(draft, photoFile, clearPhoto) {
     if (!myKey || !modal?.entry) return
     let photoUrl = modal.entry.photoUrl || null
     if (photoFile) {
@@ -1400,8 +1438,11 @@ export default function App() {
       } catch (err) {
         console.error('Photo upload failed', err)
       }
+    } else if (clearPhoto) {
+      photoUrl = null
     }
-    await editTaco(myKey, modal.entry.id, { ...draft, ...(photoUrl ? { photoUrl } : {}) })
+    // photoUrl of null deletes the field via RTDB update, so a removed photo actually clears.
+    await editTaco(myKey, modal.entry.id, { ...draft, photoUrl })
     setModal(null)
   }
 
