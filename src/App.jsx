@@ -42,6 +42,9 @@ const LT = {
   bronze: '#8D3F2D',
   glow1: 'rgba(170,24,43,0.12)',
   glow2: 'rgba(159,193,79,0.12)',
+  glass: 'rgba(251,244,230,0.62)',
+  glassStrong: 'rgba(251,244,230,0.78)',
+  glassBorder: 'rgba(141,63,45,0.18)',
 }
 
 const DT = {
@@ -64,19 +67,59 @@ const DT = {
   bronze: '#B2664B',
   glow1: 'rgba(217,58,90,0.18)',
   glow2: 'rgba(175,203,104,0.15)',
+  glass: 'rgba(46,39,42,0.55)',
+  glassStrong: 'rgba(58,50,53,0.72)',
+  glassBorder: 'rgba(241,234,215,0.14)',
 }
 
 function styles(th) {
   return {
     page: { minHeight: '100vh', background: th.bg, color: th.text, fontFamily: 'Nunito, sans-serif', paddingBottom: 40 },
-    header: { position: 'sticky', top: 0, zIndex: 10, background: th.bg, borderBottom: `1px solid ${th.line}`, padding: '16px 18px 14px' },
+    header: {
+      position: 'sticky',
+      top: 0,
+      zIndex: 10,
+      background: th.glass,
+      backdropFilter: 'blur(22px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+      borderBottom: `1px solid ${th.glassBorder}`,
+      padding: 'calc(14px + env(safe-area-inset-top)) 18px 14px',
+    },
     headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     logo: { fontFamily: 'Rye, serif', fontSize: 20, color: th.salsa },
+    wordmark: {
+      fontFamily: 'Rye, serif',
+      fontSize: 20,
+      color: th.salsa,
+      letterSpacing: 0.5,
+      padding: '6px 14px',
+      borderRadius: 12,
+      background: th.glassStrong,
+      backdropFilter: 'blur(14px) saturate(160%)',
+      WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+      border: `1px solid ${th.glassBorder}`,
+      boxShadow: `0 2px 10px ${th.shadow}`,
+    },
     iconBtn: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 16 },
     countdownBar: { marginTop: 10, fontSize: 13, color: th.subt, textAlign: 'center' },
     lockBanner: { marginTop: 10, background: th.salsa, color: '#fff', textAlign: 'center', borderRadius: 10, padding: '6px 10px', fontWeight: 700 },
     content: { maxWidth: 640, margin: '0 auto', padding: '22px 18px', paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' },
-    bottomNav: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', maxWidth: 640, margin: '0 auto', background: th.card, borderTop: `1px solid ${th.line}`, paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: `0 -3px 16px ${th.shadow}` },
+    bottomNav: {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 50,
+      display: 'flex',
+      maxWidth: 640,
+      margin: '0 auto',
+      background: th.glass,
+      backdropFilter: 'blur(24px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+      borderTop: `1px solid ${th.glassBorder}`,
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      boxShadow: `0 -4px 24px ${th.shadow}`,
+    },
     navItem: (active) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '10px 4px 8px', background: 'none', border: 'none', borderTop: `2px solid ${active ? th.salsa : 'transparent'}`, marginTop: -1, cursor: 'pointer', color: active ? th.salsa : th.tabInactive, fontWeight: 700, fontSize: 11 }),
     navIcon: (active) => ({ fontSize: 23, lineHeight: 1, transform: active ? 'scale(1.1)' : 'none', filter: active ? 'none' : 'grayscale(0.25) opacity(0.85)' }),
     segRow: { display: 'flex', gap: 4, background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 999, padding: 4, marginBottom: 18 },
@@ -156,8 +199,12 @@ function styles(th) {
     thMetaRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 13, color: th.subt },
     banner: { textAlign: 'center', borderRadius: 14, padding: '10px 14px', fontWeight: 700, marginBottom: 14 },
     podiumRow: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, marginBottom: 10 },
-    podiumCol: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: '12px 12px 0 0', width: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: 8 },
+    podiumCol: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: '12px 12px 0 0', width: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 2, padding: 8, overflow: 'hidden' },
+    podiumName: { fontWeight: 700, fontSize: 12.5, textAlign: 'center', lineHeight: 1.15, width: '100%', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' },
     listRow: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 12, padding: 10 },
+    rowHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    rowName: { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    rowCount: { flex: '0 0 auto', whiteSpace: 'nowrap' },
     joinCard: { maxWidth: 420, margin: '60px auto', padding: 24, textAlign: 'center' },
     googleBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 22, minHeight: 50, padding: '0 22px', background: th.card, color: th.text, border: `1px solid ${th.line}`, borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 12px ${th.shadow}` },
     googleG: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', background: '#fff', color: '#4285F4', fontWeight: 800, fontFamily: 'Nunito, sans-serif', border: '1px solid #dadce0' },
@@ -169,6 +216,15 @@ function styles(th) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function sanitizeName(raw) {
+  return (raw || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(CTRL_CHARS, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40)
+}
 
 function sanitizeNotes(raw) {
   return (raw || '')
@@ -442,43 +498,60 @@ const NOMINATIM_SHOP = ['bakery', 'butcher', 'deli']
 
 function useDebouncedNominatim(query, viewbox) {
   const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
   useEffect(() => {
-    if (!query || query.trim().length < 2) {
+    const q = (query || '').trim()
+    const typing = q.length >= 2
+    // Empty query but a location viewbox is set (user tapped "Near me") →
+    // list nearby food spots so they can pick without typing.
+    const nearby = !typing && !!viewbox
+    if (!typing && !nearby) {
       setResults([])
+      setLoading(false)
       return
     }
+    let cancelled = false
     const controller = new AbortController()
+    setLoading(true)
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, format: 'json', addressdetails: '1', namedetails: '1', limit: '6' })
+        const params = new URLSearchParams({ format: 'json', addressdetails: '1', namedetails: '1', limit: nearby ? '12' : '6' })
+        params.set('q', typing ? q : 'restaurant')
         if (viewbox) {
           params.set('viewbox', viewbox)
-          params.set('bounded', '0')
+          params.set('bounded', nearby ? '1' : '0')
         }
         const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, { signal: controller.signal })
         const data = await res.json()
-        setResults(
-          (data || []).filter(
-            (d) => (d.class === 'amenity' && NOMINATIM_AMENITY.includes(d.type)) || (d.class === 'shop' && NOMINATIM_SHOP.includes(d.type)),
-          ),
+        const filtered = (data || []).filter(
+          (d) => (d.class === 'amenity' && NOMINATIM_AMENITY.includes(d.type)) || (d.class === 'shop' && NOMINATIM_SHOP.includes(d.type)),
         )
+        if (!cancelled) setResults(filtered)
       } catch (err) {
-        if (err.name !== 'AbortError') setResults([])
+        if (!cancelled && err.name !== 'AbortError') setResults([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }, 400)
     return () => {
+      cancelled = true
       clearTimeout(timer)
       controller.abort()
     }
   }, [query, viewbox])
-  return results
+  return { results, loading }
 }
 
 function LocationInput({ value, onChange, priorLabels, near, S }) {
   const [query, setQuery] = useState(value?.label || '')
   const [open, setOpen] = useState(false)
-  const results = useDebouncedNominatim(query, near)
+  const { results, loading } = useDebouncedNominatim(query, near)
   const priorMatches = query.trim().length >= 1 ? priorLabels.filter((l) => l.toLowerCase().includes(query.toLowerCase())).slice(0, 4) : []
+
+  // When the user grants location via "Near me", reveal the nearby list.
+  useEffect(() => {
+    if (near) setOpen(true)
+  }, [near])
 
   function selectPrior(label) {
     onChange({ label })
@@ -515,7 +588,7 @@ function LocationInput({ value, onChange, priorLabels, near, S }) {
       <button type="button" style={S.chipBtn} onMouseDown={(e) => e.preventDefault()} onClick={homemade}>
         🏠 Homemade
       </button>
-      {open && (priorMatches.length > 0 || results.length > 0) && (
+      {open && (priorMatches.length > 0 || results.length > 0 || loading) && (
         <div style={S.autocompleteBox}>
           {priorMatches.map((l) => (
             <div key={l} style={S.autocompleteRow} onMouseDown={() => selectPrior(l)}>
@@ -527,6 +600,7 @@ function LocationInput({ value, onChange, priorLabels, near, S }) {
               🍽️ {formatResultLabel(r)}
             </div>
           ))}
+          {loading && results.length === 0 && <div style={{ ...S.autocompleteRow, color: S.subt.color, cursor: 'default' }}>🔎 Finding spots near you…</div>}
         </div>
       )}
     </div>
@@ -848,7 +922,7 @@ function Header({ theme, setTheme, locked, msLeft, onAdminOpen, onInfoOpen, S })
   return (
     <div style={S.header}>
       <div style={S.headerRow}>
-        <div style={S.logo}>🌮 Taco Fall</div>
+        <div style={S.wordmark}>🌮 TACO FALL</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={S.iconBtn} onClick={onInfoOpen} aria-label="Rules & info">
             ℹ️
@@ -984,8 +1058,10 @@ function BoardTab({ players, myKey, locked, S, th }) {
             return (
               <div key={p.key} style={{ ...S.podiumCol, height: rank === 1 ? 140 : rank === 2 ? 110 : 90 }}>
                 <div style={{ fontSize: 24 }}>{medal}</div>
-                <div style={{ fontWeight: 700 }}>{p.name}</div>
-                <div>{p.count} 🌮</div>
+                <div style={S.podiumName} title={p.name}>
+                  {p.name}
+                </div>
+                <div style={{ whiteSpace: 'nowrap' }}>{p.count} 🌮</div>
               </div>
             )
           })}
@@ -995,11 +1071,11 @@ function BoardTab({ players, myKey, locked, S, th }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
         {list.map((p, i) => (
           <div key={p.key} style={{ ...S.listRow, borderColor: p.key === myKey ? th.tortilla : th.line }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>
+            <div style={S.rowHead}>
+              <span style={S.rowName} title={p.name}>
                 {i + 1}. {p.name}
               </span>
-              <span>{p.count} 🌮</span>
+              <span style={S.rowCount}>{p.count} 🌮</span>
             </div>
             <div style={{ height: 6, background: th.line, borderRadius: 3, marginTop: 4, overflow: 'hidden' }}>
               <div style={{ width: `${(p.count / maxCount) * 100}%`, height: '100%', background: th.salsa }} />
@@ -1392,18 +1468,20 @@ export default function App() {
   }, [user])
 
   // Keep the signed-in user's player node in sync with their Google profile.
+  // Uses a transaction (reads the real server value) so it never clobbers
+  // existing entries/count — a plain set() based on the local cache wiped
+  // data when `players` was still empty on app reopen.
   useEffect(() => {
     if (!user) return
-    const key = user.uid
-    const name = user.displayName || 'Taco Fan'
+    const name = sanitizeName(user.displayName) || 'Taco Fan'
     const photoURL = user.photoURL || null
-    const cur = players[key]
-    if (!cur) {
-      set(ref(db, `${ROOT}/${key}`), { name, photoURL, count: 0, entries: {} })
-    } else if (cur.name !== name || (cur.photoURL || null) !== photoURL) {
-      update(ref(db, `${ROOT}/${key}`), { name, photoURL })
-    }
-  }, [user, players])
+    runTransaction(ref(db, `${ROOT}/${user.uid}`), (cur) => {
+      if (!cur) return { name, photoURL, count: 0, entries: {} }
+      cur.name = name
+      cur.photoURL = photoURL
+      return cur
+    })
+  }, [user])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
