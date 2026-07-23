@@ -123,6 +123,24 @@ function styles(th) {
     untaggedHint: { marginTop: 6, fontSize: 12, color: th.subt },
     photoThumb: { width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 10, margin: '8px 0' },
     photoPreview: { maxWidth: '100%', maxHeight: 200, borderRadius: 10, marginTop: 8, display: 'block' },
+    // Feed tab — Instagram-style photo cards, Threads-style text posts
+    feedWrap: { display: 'flex', flexDirection: 'column', gap: 16 },
+    feedHead: { textAlign: 'center', fontSize: 13, color: th.subt, marginBottom: 4 },
+    avatar: (size) => ({ width: size, height: size, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flex: '0 0 auto', fontSize: Math.round(size * 0.42) }),
+    feedName: { fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    feedTime: { color: th.subt, fontSize: 12, whiteSpace: 'nowrap' },
+    feedSub: { color: th.subt, fontSize: 12 },
+    igCard: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, overflow: 'hidden', boxShadow: `0 6px 18px ${th.shadow}` },
+    igHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' },
+    igPhoto: { width: '100%', display: 'block', aspectRatio: '1 / 1', objectFit: 'cover', background: th.cardSoft },
+    igBody: { padding: '12px 14px 14px' },
+    igActionRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 },
+    igCaption: { fontSize: 14, lineHeight: 1.45, wordBreak: 'break-word' },
+    thPost: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, padding: 14, display: 'flex', gap: 12 },
+    thBody: { flex: 1, minWidth: 0 },
+    thHeadRow: { display: 'flex', alignItems: 'center', gap: 6 },
+    thText: { fontSize: 15, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
+    thMetaRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 13, color: th.subt },
     banner: { textAlign: 'center', borderRadius: 14, padding: '10px 14px', fontWeight: 700, marginBottom: 14 },
     podiumRow: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, marginBottom: 10 },
     podiumCol: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: '12px 12px 0 0', width: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: 8 },
@@ -800,6 +818,7 @@ function Header({ tab, setTab, theme, setTheme, locked, msLeft, onAdminOpen, S }
   const { d, h, m, s } = splitTime(msLeft)
   const tabs = [
     ['count', 'Count'],
+    ['feed', 'Feed'],
     ['board', 'Board'],
     ['map', 'Map'],
     ['matrix', 'Matrix'],
@@ -1174,6 +1193,100 @@ function DiaryTab({ myEntries, myKey, locked, onEdit, S, th }) {
   )
 }
 
+function Avatar({ name, size = 38, S }) {
+  const initial = (name || '?').trim().charAt(0).toUpperCase() || '?'
+  return (
+    <div style={{ ...S.avatar(size), background: `hsl(${hashHue(name)}, 58%, 48%)` }} aria-hidden="true">
+      {initial}
+    </div>
+  )
+}
+
+function InstagramCard({ e, mine, S, th }) {
+  return (
+    <div style={{ ...S.igCard, borderColor: mine ? th.tortilla : th.line }}>
+      <div style={S.igHeader}>
+        <Avatar name={e.playerName} size={38} S={S} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={S.feedName}>
+            {e.playerName}
+            {mine && <span style={{ ...S.feedSub, marginLeft: 6 }}>· you</span>}
+          </div>
+          {e.location && (
+            <div style={S.feedSub}>
+              {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
+            </div>
+          )}
+        </div>
+        <div style={S.feedTime}>{formatRelative(e.ts)}</div>
+      </div>
+      <img src={e.photoUrl} style={S.igPhoto} alt="" loading="lazy" />
+      <div style={S.igBody}>
+        {e.rating != null && (
+          <div style={S.igActionRow}>
+            <StarRow rating={e.rating} size={20} color={th.salsa} bg={th.line} />
+            <span style={S.feedSub}>{e.rating}★</span>
+          </div>
+        )}
+        {e.notes && (
+          <div style={S.igCaption}>
+            <strong>{e.playerName}</strong> {e.notes}
+          </div>
+        )}
+        {e.matrix && <span style={{ ...S.matrixChip, marginTop: 8 }}>🎯 plotted</span>}
+      </div>
+    </div>
+  )
+}
+
+function ThreadsPost({ e, mine, S, th }) {
+  const hasText = e.notes && e.notes.trim().length > 0
+  return (
+    <div style={{ ...S.thPost, borderColor: mine ? th.tortilla : th.line }}>
+      <Avatar name={e.playerName} size={38} S={S} />
+      <div style={S.thBody}>
+        <div style={S.thHeadRow}>
+          <span style={S.feedName}>{e.playerName}</span>
+          {mine && <span style={S.feedSub}>· you</span>}
+          <span style={{ ...S.feedTime, marginLeft: 'auto' }}>{formatRelative(e.ts)}</span>
+        </div>
+        {hasText ? <div style={S.thText}>{e.notes}</div> : <div style={{ ...S.thText, color: th.subt }}>logged a taco 🌮</div>}
+        <div style={S.thMetaRow}>
+          {e.rating != null ? <StarRow rating={e.rating} size={15} color={th.salsa} bg={th.line} /> : <span>— unrated</span>}
+          {e.location && (
+            <span>
+              {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
+            </span>
+          )}
+          {e.matrix && <span>🎯 plotted</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FeedTab({ entries, myKey, S, th }) {
+  const sorted = useMemo(() => [...entries].sort((a, b) => (b.ts || 0) - (a.ts || 0)), [entries])
+  if (sorted.length === 0) return <div style={S.card}>No tacos yet — post the first one from the Count tab. 🌮</div>
+
+  return (
+    <div>
+      <div style={S.feedHead}>
+        🌮 {sorted.length} taco{sorted.length === 1 ? '' : 's'} · freshest first
+      </div>
+      <div style={S.feedWrap}>
+        {sorted.map((e) =>
+          e.photoUrl ? (
+            <InstagramCard key={e.id} e={e} mine={e.playerKey === myKey} S={S} th={th} />
+          ) : (
+            <ThreadsPost key={e.id} e={e} mine={e.playerKey === myKey} S={S} th={th} />
+          ),
+        )}
+      </div>
+    </div>
+  )
+}
+
 function RulesTab({ S }) {
   return (
     <div style={S.card}>
@@ -1334,6 +1447,7 @@ export default function App() {
             {tab === 'count' && (
               <CountTab me={me} myKey={myKey} myPlayer={myPlayer} locked={locked} onPlus={() => !locked && setModal({ mode: 'create' })} onMinus={handleMinus} S={S} />
             )}
+            {tab === 'feed' && <FeedTab entries={allEntries} myKey={myKey} S={S} th={th} />}
             {tab === 'board' && <BoardTab players={players} myKey={myKey} locked={locked} S={S} th={th} />}
             {tab === 'map' && <MapTab entries={allEntries} S={S} />}
             {tab === 'matrix' && <MatrixTab entries={allEntries} myKey={myKey} S={S} th={th} />}
