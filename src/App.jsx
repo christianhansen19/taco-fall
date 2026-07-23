@@ -70,12 +70,19 @@ const DT = {
 function styles(th) {
   return {
     page: { minHeight: '100vh', background: th.bg, color: th.text, fontFamily: 'Nunito, sans-serif', paddingBottom: 40 },
-    header: { position: 'sticky', top: 0, zIndex: 10, background: th.bg, borderBottom: `1px solid ${th.line}`, padding: '12px 16px' },
+    header: { position: 'sticky', top: 0, zIndex: 10, background: th.bg, borderBottom: `1px solid ${th.line}`, padding: '16px 18px 14px' },
     headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     logo: { fontFamily: 'Rye, serif', fontSize: 20, color: th.salsa },
     iconBtn: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 16 },
-    countdownBar: { marginTop: 8, fontSize: 13, color: th.subt, textAlign: 'center' },
-    lockBanner: { marginTop: 8, background: th.salsa, color: '#fff', textAlign: 'center', borderRadius: 10, padding: '6px 10px', fontWeight: 700 },
+    countdownBar: { marginTop: 10, fontSize: 13, color: th.subt, textAlign: 'center' },
+    lockBanner: { marginTop: 10, background: th.salsa, color: '#fff', textAlign: 'center', borderRadius: 10, padding: '6px 10px', fontWeight: 700 },
+    content: { maxWidth: 640, margin: '0 auto', padding: '22px 18px', paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' },
+    bottomNav: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex', maxWidth: 640, margin: '0 auto', background: th.card, borderTop: `1px solid ${th.line}`, paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: `0 -3px 16px ${th.shadow}` },
+    navItem: (active) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '10px 4px 8px', background: 'none', border: 'none', borderTop: `2px solid ${active ? th.salsa : 'transparent'}`, marginTop: -1, cursor: 'pointer', color: active ? th.salsa : th.tabInactive, fontWeight: 700, fontSize: 11 }),
+    navIcon: (active) => ({ fontSize: 23, lineHeight: 1, transform: active ? 'scale(1.1)' : 'none', filter: active ? 'none' : 'grayscale(0.25) opacity(0.85)' }),
+    segRow: { display: 'flex', gap: 4, background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 999, padding: 4, marginBottom: 18 },
+    segBtn: (active) => ({ flex: 1, padding: '10px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: active ? th.salsa : 'transparent', color: active ? '#fff' : th.tabInactive }),
+    feedEditBtn: { background: 'none', border: 'none', color: th.salsa, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0, whiteSpace: 'nowrap', marginTop: 2 },
     tabs: { display: 'flex', gap: 6, overflowX: 'auto', marginTop: 10, paddingBottom: 4 },
     tab: (active) => ({
       flex: '0 0 auto',
@@ -88,7 +95,7 @@ function styles(th) {
       cursor: 'pointer',
       fontSize: 13,
     }),
-    card: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, padding: 16, boxShadow: `0 4px 14px ${th.shadow}` },
+    card: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, padding: 18, boxShadow: `0 4px 14px ${th.shadow}` },
     cardTitle: { fontFamily: 'Rye, serif', fontSize: 15, marginBottom: 10, color: th.text },
     sectionHeader: { fontFamily: 'Rye, serif', fontSize: 14, marginBottom: 10, color: th.text },
     subt: { color: th.subt, fontSize: 13 },
@@ -131,8 +138,8 @@ function styles(th) {
     photoThumb: { width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 10, margin: '8px 0' },
     photoPreview: { maxWidth: '100%', maxHeight: 200, borderRadius: 10, marginTop: 8, display: 'block' },
     // Feed tab — Instagram-style photo cards, Threads-style text posts
-    feedWrap: { display: 'flex', flexDirection: 'column', gap: 16 },
-    feedHead: { textAlign: 'center', fontSize: 13, color: th.subt, marginBottom: 4 },
+    feedWrap: { display: 'flex', flexDirection: 'column', gap: 18 },
+    feedHead: { textAlign: 'center', fontSize: 13, color: th.subt, marginBottom: 12 },
     avatar: (size) => ({ width: size, height: size, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flex: '0 0 auto', fontSize: Math.round(size * 0.42) }),
     feedName: { fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     feedTime: { color: th.subt, fontSize: 12, whiteSpace: 'nowrap' },
@@ -852,23 +859,16 @@ function AdminModal({ total, onReset, onNuke, onClose, S }) {
 // Header
 // ---------------------------------------------------------------------------
 
-function Header({ tab, setTab, theme, setTheme, locked, msLeft, onAdminOpen, S }) {
+function Header({ theme, setTheme, locked, msLeft, onAdminOpen, onInfoOpen, S }) {
   const { d, h, m, s } = splitTime(msLeft)
-  const tabs = [
-    ['count', 'Count'],
-    ['feed', 'Feed'],
-    ['board', 'Board'],
-    ['map', 'Map'],
-    ['matrix', 'Matrix'],
-    ['stars', 'Stars'],
-    ['diary', 'Diary'],
-    ['rules', 'Rules'],
-  ]
   return (
     <div style={S.header}>
       <div style={S.headerRow}>
         <div style={S.logo}>🌮 Taco Fall</div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button style={S.iconBtn} onClick={onInfoOpen} aria-label="Rules & info">
+            ℹ️
+          </button>
           <button style={S.iconBtn} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
@@ -884,14 +884,29 @@ function Header({ tab, setTab, theme, setTheme, locked, msLeft, onAdminOpen, S }
       ) : (
         <div style={S.lockBanner}>🔒 Counting closed — final tally</div>
       )}
-      <div style={S.tabs}>
-        {tabs.map(([id, label]) => (
-          <button key={id} style={S.tab(tab === id)} onClick={() => setTab(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
     </div>
+  )
+}
+
+function BottomNav({ tab, setTab, S }) {
+  const items = [
+    ['count', '🌮', 'Count'],
+    ['feed', '📱', 'Feed'],
+    ['ranks', '🏆', 'Ranks'],
+    ['explore', '🗺️', 'Explore'],
+  ]
+  return (
+    <nav style={S.bottomNav}>
+      {items.map(([id, icon, label]) => {
+        const active = tab === id
+        return (
+          <button key={id} style={S.navItem(active)} onClick={() => setTab(id)} aria-current={active ? 'page' : undefined}>
+            <span style={S.navIcon(active)}>{icon}</span>
+            <span>{label}</span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -1195,42 +1210,6 @@ function StarsTab({ entries, players, myKey, S, th }) {
   )
 }
 
-function DiaryTab({ myEntries, myKey, locked, onEdit, S, th }) {
-  if (!myKey) return <div style={S.card}>Sign in to see your diary.</div>
-  const sorted = [...myEntries].sort((a, b) => b.ts - a.ts)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {sorted.length === 0 && <div style={S.card}>No tacos logged yet — hit +1 to start your diary.</div>}
-      {sorted.map((e) => {
-        const untagged = e.rating == null && !e.location && !e.notes && !e.matrix
-        return (
-          <div key={e.id} style={{ ...S.diaryRow, borderStyle: untagged ? 'dashed' : 'solid' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={S.subt}>{formatRelative(e.ts)}</span>
-              {!locked && (
-                <button style={S.ghostBtnSm} onClick={() => onEdit(e)}>
-                  ✏️ edit
-                </button>
-              )}
-            </div>
-            {e.photoUrl && <img src={e.photoUrl} style={S.photoThumb} alt="" />}
-            <div>{e.rating != null ? <StarRow rating={e.rating} size={16} color={th.salsa} bg={th.line} /> : '— unrated'}</div>
-            {e.location && (
-              <div style={S.subt}>
-                {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
-              </div>
-            )}
-            {e.notes && <div style={{ fontStyle: 'italic' }}>{e.notes}</div>}
-            {e.matrix && <span style={S.matrixChip}>🎯 plotted</span>}
-            {untagged && <div style={S.untaggedHint}>🔖 Untagged taco — tap edit to add stars, place &amp; notes</div>}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 function Avatar({ name, size = 38, S }) {
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
@@ -1240,7 +1219,7 @@ function Avatar({ name, size = 38, S }) {
   )
 }
 
-function InstagramCard({ e, mine, S, th }) {
+function InstagramCard({ e, mine, onEdit, S, th }) {
   return (
     <div style={{ ...S.igCard, borderColor: mine ? th.tortilla : th.line }}>
       <div style={S.igHeader}>
@@ -1256,7 +1235,14 @@ function InstagramCard({ e, mine, S, th }) {
             </div>
           )}
         </div>
-        <div style={S.feedTime}>{formatRelative(e.ts)}</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={S.feedTime}>{formatRelative(e.ts)}</div>
+          {onEdit && (
+            <button style={S.feedEditBtn} onClick={() => onEdit(e)}>
+              ✏️ edit
+            </button>
+          )}
+        </div>
       </div>
       <img src={e.photoUrl} style={S.igPhoto} alt="" loading="lazy" />
       <div style={S.igBody}>
@@ -1277,16 +1263,22 @@ function InstagramCard({ e, mine, S, th }) {
   )
 }
 
-function ThreadsPost({ e, mine, S, th }) {
+function ThreadsPost({ e, mine, onEdit, S, th }) {
   const hasText = e.notes && e.notes.trim().length > 0
+  const untagged = e.rating == null && !e.location && !e.notes && !e.matrix
   return (
-    <div style={{ ...S.thPost, borderColor: mine ? th.tortilla : th.line }}>
+    <div style={{ ...S.thPost, borderColor: mine ? th.tortilla : th.line, borderStyle: untagged ? 'dashed' : 'solid' }}>
       <Avatar name={e.playerName} size={38} S={S} />
       <div style={S.thBody}>
         <div style={S.thHeadRow}>
           <span style={S.feedName}>{e.playerName}</span>
           {mine && <span style={S.feedSub}>· you</span>}
           <span style={{ ...S.feedTime, marginLeft: 'auto' }}>{formatRelative(e.ts)}</span>
+          {onEdit && (
+            <button style={{ ...S.feedEditBtn, marginTop: 0, marginLeft: 10 }} onClick={() => onEdit(e)}>
+              ✏️
+            </button>
+          )}
         </div>
         {hasText ? <div style={S.thText}>{e.notes}</div> : <div style={{ ...S.thText, color: th.subt }}>logged a taco 🌮</div>}
         <div style={S.thMetaRow}>
@@ -1298,46 +1290,100 @@ function ThreadsPost({ e, mine, S, th }) {
           )}
           {e.matrix && <span>🎯 plotted</span>}
         </div>
+        {onEdit && untagged && <div style={S.untaggedHint}>🔖 Untagged taco — tap ✏️ to add stars, place &amp; notes</div>}
       </div>
     </div>
   )
 }
 
-function FeedTab({ entries, myKey, S, th }) {
+function FeedTab({ entries, myKey, locked, onEdit, S, th }) {
+  const [scope, setScope] = useState('everyone')
   const sorted = useMemo(() => [...entries].sort((a, b) => (b.ts || 0) - (a.ts || 0)), [entries])
-  if (sorted.length === 0) return <div style={S.card}>No tacos yet — post the first one from the Count tab. 🌮</div>
+  const shown = scope === 'mine' ? sorted.filter((e) => e.playerKey === myKey) : sorted
+  const canEdit = scope === 'mine' && !locked && myKey ? onEdit : null
 
   return (
     <div>
-      <div style={S.feedHead}>
-        🌮 {sorted.length} taco{sorted.length === 1 ? '' : 's'} · freshest first
+      <div style={S.segRow}>
+        <button style={S.segBtn(scope === 'everyone')} onClick={() => setScope('everyone')}>
+          Everyone
+        </button>
+        <button style={S.segBtn(scope === 'mine')} onClick={() => setScope('mine')}>
+          Mine
+        </button>
       </div>
-      <div style={S.feedWrap}>
-        {sorted.map((e) =>
-          e.photoUrl ? (
-            <InstagramCard key={e.id} e={e} mine={e.playerKey === myKey} S={S} th={th} />
-          ) : (
-            <ThreadsPost key={e.id} e={e} mine={e.playerKey === myKey} S={S} th={th} />
-          ),
-        )}
-      </div>
+      {shown.length === 0 ? (
+        <div style={S.card}>
+          {scope === 'mine' ? 'No tacos logged yet — hit the 🌮 Count tab to start your diary.' : 'No tacos yet — post the first one from the Count tab. 🌮'}
+        </div>
+      ) : (
+        <>
+          <div style={S.feedHead}>
+            🌮 {shown.length} taco{shown.length === 1 ? '' : 's'} · freshest first
+          </div>
+          <div style={S.feedWrap}>
+            {shown.map((e) => {
+              const mine = e.playerKey === myKey
+              return e.photoUrl ? (
+                <InstagramCard key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} S={S} th={th} />
+              ) : (
+                <ThreadsPost key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} S={S} th={th} />
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-function RulesTab({ S }) {
+function ExploreTab({ entries, myKey, S, th }) {
+  const [view, setView] = useState('map')
   return (
-    <div style={S.card}>
-      <div style={S.cardTitle}>🌮 The Rules</div>
-      <ul style={{ lineHeight: 1.8, paddingLeft: 20, margin: 0 }}>
-        <li>You must be able to pick it up — no forks.</li>
-        <li>Taco salads, taco bowls, and burritos do not count.</li>
-        <li>2 street-size tacos = 1 taco.</li>
-        <li>Tostadas count if folded and eaten by hand.</li>
-        <li>Any protein is fair game — traditional or fusion.</li>
-        <li>Homemade tacos always count.</li>
-        <li>Lettuce wrap instead of a tortilla is OK only if you're gluten-free.</li>
-      </ul>
+    <div>
+      <div style={S.segRow}>
+        <button style={S.segBtn(view === 'map')} onClick={() => setView('map')}>
+          🗺️ Map
+        </button>
+        <button style={S.segBtn(view === 'matrix')} onClick={() => setView('matrix')}>
+          📊 Matrix
+        </button>
+      </div>
+      {view === 'map' ? <MapTab entries={entries} S={S} /> : <MatrixTab entries={entries} myKey={myKey} S={S} th={th} />}
+    </div>
+  )
+}
+
+function RanksTab({ players, entries, myKey, locked, S, th }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <BoardTab players={players} myKey={myKey} locked={locked} S={S} th={th} />
+      <StarsTab entries={entries} players={players} myKey={myKey} S={S} th={th} />
+    </div>
+  )
+}
+
+function RulesModal({ onClose, S }) {
+  return (
+    <div style={S.modalOverlay} onMouseDown={onClose}>
+      <div style={S.modalCard} onMouseDown={(e) => e.stopPropagation()}>
+        <div style={S.sheetHandle} />
+        <div style={S.modalTitle}>🌮 The Rules</div>
+        <ul style={{ lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
+          <li>You must be able to pick it up — no forks.</li>
+          <li>Taco salads, taco bowls, and burritos do not count.</li>
+          <li>2 street-size tacos = 1 taco.</li>
+          <li>Tostadas count if folded and eaten by hand.</li>
+          <li>Any protein is fair game — traditional or fusion.</li>
+          <li>Homemade tacos always count.</li>
+          <li>Lettuce wrap instead of a tortilla is OK only if you're gluten-free.</li>
+        </ul>
+        <div style={{ marginTop: 18 }}>
+          <button style={{ ...S.ghostBtn, width: '100%', minHeight: 48 }} onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1356,6 +1402,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now())
   const [modal, setModal] = useState(null)
   const [adminOpen, setAdminOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
   const [rain, setRain] = useState([])
 
   useEffect(() => onValue(ref(db, ROOT), (snap) => setPlayers(snap.val() || {})), [])
@@ -1373,7 +1420,6 @@ export default function App() {
   const myKey = me ? keyFor(me) : null
   const myPlayer = myKey ? players[myKey] : null
   const allEntries = useMemo(() => flattenEntries(players), [players])
-  const myEntries = useMemo(() => allEntries.filter((e) => e.playerKey === myKey), [allEntries, myKey])
   const priorLabels = useMemo(() => {
     const set = new Set()
     for (const e of allEntries) if (e.location?.label && e.location.label !== 'Homemade') set.add(e.location.label)
@@ -1483,19 +1529,18 @@ export default function App() {
         <JoinScreen players={players} onJoin={handleJoin} S={S} />
       ) : (
         <>
-          <Header tab={tab} setTab={setTab} theme={theme} setTheme={setTheme} locked={locked} msLeft={LOCK.getTime() - now} onAdminOpen={() => setAdminOpen(true)} S={S} />
-          <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
+          <Header theme={theme} setTheme={setTheme} locked={locked} msLeft={LOCK.getTime() - now} onAdminOpen={() => setAdminOpen(true)} onInfoOpen={() => setInfoOpen(true)} S={S} />
+          <div style={S.content}>
             {tab === 'count' && (
               <CountTab me={me} myKey={myKey} myPlayer={myPlayer} locked={locked} onPlus={() => !locked && setModal({ mode: 'create' })} onMinus={handleMinus} S={S} />
             )}
-            {tab === 'feed' && <FeedTab entries={allEntries} myKey={myKey} S={S} th={th} />}
-            {tab === 'board' && <BoardTab players={players} myKey={myKey} locked={locked} S={S} th={th} />}
-            {tab === 'map' && <MapTab entries={allEntries} S={S} />}
-            {tab === 'matrix' && <MatrixTab entries={allEntries} myKey={myKey} S={S} th={th} />}
-            {tab === 'stars' && <StarsTab entries={allEntries} players={players} myKey={myKey} S={S} th={th} />}
-            {tab === 'diary' && <DiaryTab myEntries={myEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} S={S} th={th} />}
-            {tab === 'rules' && <RulesTab S={S} />}
+            {tab === 'feed' && (
+              <FeedTab entries={allEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} S={S} th={th} />
+            )}
+            {tab === 'ranks' && <RanksTab players={players} entries={allEntries} myKey={myKey} locked={locked} S={S} th={th} />}
+            {tab === 'explore' && <ExploreTab entries={allEntries} myKey={myKey} S={S} th={th} />}
           </div>
+          <BottomNav tab={tab} setTab={setTab} S={S} />
         </>
       )}
 
@@ -1513,6 +1558,8 @@ export default function App() {
       )}
 
       {adminOpen && <AdminModal total={total} onReset={handleAdminReset} onNuke={handleAdminNuke} onClose={() => setAdminOpen(false)} S={S} />}
+
+      {infoOpen && <RulesModal onClose={() => setInfoOpen(false)} S={S} />}
     </div>
   )
 }
