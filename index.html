@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Taco Fall</title>
+    <meta name="description" content="A real-time, multi-player taco-tallying scrapbook for the crew — locked Dec 9." />
+    <meta name="theme-color" content="#F1EAD7" />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/taco-fall/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/taco-fall/apple-touch-icon.png" />
+    <link rel="manifest" href="/taco-fall/manifest.webmanifest" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Taco" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rye&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: 'Nunito', system-ui, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none;
+      }
+
+      @keyframes bfall {
+        0% {
+          transform: translateY(-10vh) translateX(0) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(110vh) translateX(var(--sway, 0px)) rotate(360deg);
+          opacity: 0.9;
+        }
+      }
+      .bfall-emoji {
+        position: fixed;
+        top: 0;
+        pointer-events: none;
+        z-index: 9999;
+        animation-name: bfall;
+        animation-timing-function: linear;
+        animation-fill-mode: forwards;
+      }
+    </style>
+    <script type="module" crossorigin src="/taco-fall/assets/index-DWbPdu9w.js"></script>
+    <link rel="stylesheet" crossorigin href="/taco-fall/assets/index-CXlvz8pP.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
