@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { onValue, push, ref, runTransaction, set, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import L from 'leaflet'
-import { db, storage } from './firebase'
+import { auth, db, googleProvider, storage } from './firebase'
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
 const ROOT = 'tacos'
-const MAX_P = 30
-const ME_KEY = 'tacoName_v1'
 const THEME_KEY = 'tacoTheme_v1'
 const ADMIN_PW = 'ualumni'
 const NOTES_MAX = 280
@@ -160,21 +159,16 @@ function styles(th) {
     podiumCol: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: '12px 12px 0 0', width: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: 8 },
     listRow: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 12, padding: 10 },
     joinCard: { maxWidth: 420, margin: '60px auto', padding: 24, textAlign: 'center' },
+    googleBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 22, minHeight: 50, padding: '0 22px', background: th.card, color: th.text, border: `1px solid ${th.line}`, borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 12px ${th.shadow}` },
+    googleG: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', background: '#fff', color: '#4285F4', fontWeight: 800, fontFamily: 'Nunito, sans-serif', border: '1px solid #dadce0' },
+    signInError: { marginTop: 14, fontSize: 13, color: th.salsa },
+    accountRow: { display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 2 },
   }
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function sanitize(raw) {
-  return (raw || '')
-    .replace(/<[^>]*>/g, '')
-    .replace(CTRL_CHARS, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 18)
-}
 
 function sanitizeNotes(raw) {
   return (raw || '')
@@ -192,10 +186,6 @@ function sanitizeLabel(raw) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 120)
-}
-
-function keyFor(name) {
-  return encodeURIComponent(name.trim().toLowerCase()).replace(/\./g, '%2E')
 }
 
 function hashHue(str) {
@@ -240,7 +230,7 @@ function flattenEntries(players) {
   const out = []
   for (const [key, p] of Object.entries(players || {})) {
     const entries = p?.entries || {}
-    for (const [id, e] of Object.entries(entries)) out.push({ ...e, id, playerKey: key, playerName: p.name })
+    for (const [id, e] of Object.entries(entries)) out.push({ ...e, id, playerKey: key, playerName: p.name, playerPhoto: p.photoURL || null })
   }
   return out
 }
@@ -318,12 +308,6 @@ function earnedBadges(player) {
 // Firebase mutations — all count-changing writes go through runTransaction on
 // the parent player node so concurrent devices can't clobber each other.
 // ---------------------------------------------------------------------------
-
-async function ensurePlayer(name) {
-  const key = keyFor(name)
-  await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => cur || { name, count: 0, entries: {} })
-  return key
-}
 
 async function logTacoWithId(key, id, entry) {
   await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => {
@@ -911,39 +895,19 @@ function BottomNav({ tab, setTab, S }) {
 }
 
 // ---------------------------------------------------------------------------
-// Join screen
+// Sign-in screen
 // ---------------------------------------------------------------------------
 
-function JoinScreen({ players, onJoin, S }) {
-  const [name, setName] = useState('')
-  const names = Object.values(players).map((p) => p.name)
+function SignInScreen({ onSignIn, signingIn, error, S }) {
   return (
     <div style={S.joinCard}>
-      <div style={S.logo}>🌮 Taco Fall</div>
-      <p style={S.subt}>Enter your name to join the crew (max {MAX_P}).</p>
-      <input
-        style={S.input}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && onJoin(name)}
-        placeholder="Your name"
-        maxLength={18}
-      />
-      <button style={{ ...S.primaryBtn, marginTop: 12 }} onClick={() => onJoin(name)}>
-        Join 🌮
+      <div style={{ ...S.logo, fontSize: 30 }}>🌮 Taco Fall</div>
+      <p style={{ ...S.subt, marginTop: 12 }}>A summer-long taco tally for the crew — sign in with Google to join.</p>
+      <button style={S.googleBtn} onClick={onSignIn} disabled={signingIn}>
+        <span style={S.googleG}>G</span>
+        {signingIn ? 'Signing in…' : 'Sign in with Google'}
       </button>
-      {names.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div style={S.subt}>Already playing:</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, justifyContent: 'center' }}>
-            {names.map((n) => (
-              <button key={n} style={S.chipBtn} onClick={() => onJoin(n)}>
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {error && <div style={S.signInError}>{error}</div>}
     </div>
   )
 }
@@ -952,7 +916,7 @@ function JoinScreen({ players, onJoin, S }) {
 // Tabs
 // ---------------------------------------------------------------------------
 
-function CountTab({ me, myKey, myPlayer, locked, onPlus, onMinus, S }) {
+function CountTab({ me, myKey, myPlayer, photoURL, locked, onPlus, onMinus, onSignOut, S }) {
   const count = myPlayer?.count || 0
   const myEntries = myPlayer ? flattenEntries({ [myKey]: myPlayer }) : []
   const badges = earnedBadges({ count, entries: myEntries })
@@ -961,8 +925,14 @@ function CountTab({ me, myKey, myPlayer, locked, onPlus, onMinus, S }) {
 
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={S.subt}>
-        Signed in as <strong>{me}</strong>
+      <div style={S.accountRow}>
+        <Avatar name={me} photoURL={photoURL} size={26} S={S} />
+        <span style={S.subt}>
+          <strong>{me}</strong>
+        </span>
+        <button style={{ ...S.linkBtn, marginLeft: 4 }} onClick={onSignOut}>
+          Sign out
+        </button>
       </div>
       <div style={S.bigCount}>{count}</div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
@@ -1210,7 +1180,10 @@ function StarsTab({ entries, players, myKey, S, th }) {
   )
 }
 
-function Avatar({ name, size = 38, S }) {
+function Avatar({ name, photoURL, size = 38, S }) {
+  if (photoURL) {
+    return <img src={photoURL} alt="" referrerPolicy="no-referrer" style={{ ...S.avatar(size), objectFit: 'cover', background: 'transparent' }} />
+  }
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
     <div style={{ ...S.avatar(size), background: `hsl(${hashHue(name)}, 58%, 48%)` }} aria-hidden="true">
@@ -1223,7 +1196,7 @@ function InstagramCard({ e, mine, onEdit, S, th }) {
   return (
     <div style={{ ...S.igCard, borderColor: mine ? th.tortilla : th.line }}>
       <div style={S.igHeader}>
-        <Avatar name={e.playerName} size={38} S={S} />
+        <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} S={S} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={S.feedName}>
             {e.playerName}
@@ -1268,7 +1241,7 @@ function ThreadsPost({ e, mine, onEdit, S, th }) {
   const untagged = e.rating == null && !e.location && !e.notes && !e.matrix
   return (
     <div style={{ ...S.thPost, borderColor: mine ? th.tortilla : th.line, borderStyle: untagged ? 'dashed' : 'solid' }}>
-      <Avatar name={e.playerName} size={38} S={S} />
+      <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} S={S} />
       <div style={S.thBody}>
         <div style={S.thHeadRow}>
           <span style={S.feedName}>{e.playerName}</span>
@@ -1396,7 +1369,9 @@ export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
   const th = theme === 'dark' ? DT : LT
   const S = useMemo(() => styles(th), [th])
-  const [me, setMe] = useState(() => localStorage.getItem(ME_KEY) || '')
+  const [user, setUser] = useState(undefined) // undefined = auth loading, null = signed out
+  const [signingIn, setSigningIn] = useState(false)
+  const [signInError, setSignInError] = useState('')
   const [players, setPlayers] = useState({})
   const [tab, setTab] = useState('count')
   const [now, setNow] = useState(Date.now())
@@ -1405,7 +1380,30 @@ export default function App() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [rain, setRain] = useState([])
 
-  useEffect(() => onValue(ref(db, ROOT), (snap) => setPlayers(snap.val() || {})), [])
+  useEffect(() => onAuthStateChanged(auth, (u) => setUser(u)), [])
+
+  // Subscribe to the shared data only once signed in (keeps reads behind auth).
+  useEffect(() => {
+    if (!user) {
+      setPlayers({})
+      return
+    }
+    return onValue(ref(db, ROOT), (snap) => setPlayers(snap.val() || {}))
+  }, [user])
+
+  // Keep the signed-in user's player node in sync with their Google profile.
+  useEffect(() => {
+    if (!user) return
+    const key = user.uid
+    const name = user.displayName || 'Taco Fan'
+    const photoURL = user.photoURL || null
+    const cur = players[key]
+    if (!cur) {
+      set(ref(db, `${ROOT}/${key}`), { name, photoURL, count: 0, entries: {} })
+    } else if (cur.name !== name || (cur.photoURL || null) !== photoURL) {
+      update(ref(db, `${ROOT}/${key}`), { name, photoURL })
+    }
+  }, [user, players])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
@@ -1417,8 +1415,9 @@ export default function App() {
   }, [theme])
 
   const locked = now >= LOCK.getTime()
-  const myKey = me ? keyFor(me) : null
+  const myKey = user ? user.uid : null
   const myPlayer = myKey ? players[myKey] : null
+  const myName = user?.displayName || myPlayer?.name || 'Taco Fan'
   const allEntries = useMemo(() => flattenEntries(players), [players])
   const priorLabels = useMemo(() => {
     const set = new Set()
@@ -1427,17 +1426,24 @@ export default function App() {
   }, [allEntries])
   const total = Object.values(players).reduce((a, p) => a + (p.count || 0), 0)
 
-  async function handleJoin(rawName) {
-    const clean = sanitize(rawName)
-    if (!clean) return
-    const key = keyFor(clean)
-    if (Object.keys(players).length >= MAX_P && !players[key]) {
-      alert(`This crew is full (max ${MAX_P}).`)
-      return
+  async function handleSignIn() {
+    setSigningIn(true)
+    setSignInError('')
+    try {
+      await signInWithPopup(auth, googleProvider)
+    } catch (err) {
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        setSignInError('Sign-in failed. Please try again.')
+        console.error('Sign-in error', err)
+      }
+    } finally {
+      setSigningIn(false)
     }
-    await ensurePlayer(clean)
-    localStorage.setItem(ME_KEY, clean)
-    setMe(clean)
+  }
+
+  async function handleSignOut() {
+    await signOut(auth)
+    setTab('count')
   }
 
   function triggerRain() {
@@ -1509,8 +1515,7 @@ export default function App() {
 
   async function handleAdminNuke() {
     await set(ref(db, ROOT), null)
-    localStorage.removeItem(ME_KEY)
-    setMe('')
+    // The signed-in admin's node is re-created fresh by the profile-sync effect.
   }
 
   return (
@@ -1525,14 +1530,19 @@ export default function App() {
         </span>
       ))}
 
-      {!me ? (
-        <JoinScreen players={players} onJoin={handleJoin} S={S} />
+      {user === undefined ? (
+        <div style={{ ...S.joinCard, marginTop: 120 }}>
+          <div style={{ ...S.logo, fontSize: 30 }}>🌮 Taco Fall</div>
+          <div style={{ ...S.subt, marginTop: 12 }}>Loading…</div>
+        </div>
+      ) : !user ? (
+        <SignInScreen onSignIn={handleSignIn} signingIn={signingIn} error={signInError} S={S} />
       ) : (
         <>
           <Header theme={theme} setTheme={setTheme} locked={locked} msLeft={LOCK.getTime() - now} onAdminOpen={() => setAdminOpen(true)} onInfoOpen={() => setInfoOpen(true)} S={S} />
           <div style={S.content}>
             {tab === 'count' && (
-              <CountTab me={me} myKey={myKey} myPlayer={myPlayer} locked={locked} onPlus={() => !locked && setModal({ mode: 'create' })} onMinus={handleMinus} S={S} />
+              <CountTab me={myName} myKey={myKey} myPlayer={myPlayer} photoURL={user.photoURL} locked={locked} onPlus={() => !locked && setModal({ mode: 'create' })} onMinus={handleMinus} onSignOut={handleSignOut} S={S} />
             )}
             {tab === 'feed' && (
               <FeedTab entries={allEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} S={S} th={th} />
