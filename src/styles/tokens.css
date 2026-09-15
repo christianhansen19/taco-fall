@@ -31,7 +31,11 @@
   --silver: #9a9188;
   --bronze: #a9673a;
 
+  /* --on-accent rides the light palette fills (avatars, marigold) and so flips
+     with the theme. --on-chili never does: red sits mid-luminance in both
+     themes, so anything filled with it always needs light text. */
   --on-accent: #fff8ef;
+  --on-chili: #fff8ef;
 
   --shadow-sm: 0 1px 2px rgba(74, 40, 30, 0.06), 0 2px 6px rgba(74, 40, 30, 0.05);
   --shadow-md: 0 2px 4px rgba(74, 40, 30, 0.06), 0 8px 20px rgba(74, 40, 30, 0.08);
@@ -40,6 +44,16 @@
   --glass: rgba(251, 243, 231, 0.72);
   --glass-strong: rgba(255, 255, 255, 0.82);
   --glass-border: rgba(176, 48, 47, 0.14);
+
+  /* Washes of the palette bled into the page so the background has depth
+     without ever competing with the content sitting on it. */
+  --page-bg:
+    radial-gradient(1100px 620px at 8% -8%, rgba(235, 143, 44, 0.2), transparent 62%),
+    radial-gradient(900px 520px at 98% 2%, rgba(176, 54, 127, 0.13), transparent 58%),
+    radial-gradient(1000px 700px at 50% 108%, rgba(39, 97, 36, 0.1), transparent 62%),
+    linear-gradient(180deg, #fdf8f0 0%, #fbf3e7 46%, #f6e9d8 100%);
+  --surface-grad: linear-gradient(168deg, rgba(255, 255, 255, 0.96) 0%, rgba(253, 247, 238, 0.92) 100%);
+  --accent-grad: linear-gradient(135deg, #c2402f 0%, #b0302f 55%, #8c2424 100%);
 
   --font-display: 'Baloo 2', 'Nunito', system-ui, sans-serif;
   --font-body: 'Nunito', system-ui, sans-serif;
@@ -88,4 +102,30 @@
   --glass: rgba(30, 21, 23, 0.72);
   --glass-strong: rgba(42, 31, 33, 0.86);
   --glass-border: rgba(247, 237, 224, 0.12);
+
+  --page-bg:
+    radial-gradient(1100px 620px at 8% -8%, rgba(235, 143, 44, 0.16), transparent 62%),
+    radial-gradient(900px 520px at 98% 2%, rgba(217, 107, 171, 0.13), transparent 58%),
+    radial-gradient(1000px 700px at 50% 108%, rgba(111, 169, 92, 0.09), transparent 62%),
+    linear-gradient(180deg, #271c1e 0%, #1e1517 48%, #150e10 100%);
+  --surface-grad: linear-gradient(168deg, rgba(56, 43, 46, 0.96) 0%, rgba(40, 30, 32, 0.94) 100%);
+  /* Deep enough that --on-chili clears 5:1; the lighter dark-mode --chili is
+     for text and icons on the page, not as a fill behind text. */
+  --accent-grad: linear-gradient(135deg, #c24240 0%, #b0302f 55%, #8c2424 100%);
+}
+
+/* The floating nav reads as a control layer above the page, so it keeps its own
+   dark glass in both themes rather than following the surface tokens. */
+:root {
+  --nav-bg: rgba(38, 24, 21, 0.82);
+  --nav-fg: #fdf6ec;
+  --nav-border: rgba(255, 255, 255, 0.12);
+  --nav-pill: rgba(255, 255, 255, 0.16);
+}
+
+:root[data-theme='dark'] {
+  --nav-bg: rgba(58, 44, 47, 0.8);
+  --nav-fg: #f7ede0;
+  --nav-border: rgba(255, 255, 255, 0.1);
+  --nav-pill: rgba(255, 255, 255, 0.14);
 }

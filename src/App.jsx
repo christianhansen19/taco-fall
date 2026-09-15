@@ -8,6 +8,7 @@ import { applyEntries, clamp, entryQty, mergeEntry, QTY_MAX, QTY_MIN, removeLast
 import { DEMO, DEMO_USER, demoPlayers } from './lib/demo'
 import { THEME_ICON, THEME_LABEL, useTheme } from './theme'
 import PapelPicado from './components/PapelPicado'
+import { CountIcon, ExploreIcon, FeedIcon, RanksIcon } from './components/NavIcons'
 
 // ---------------------------------------------------------------------------
 // Config
@@ -790,24 +791,38 @@ function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOp
   )
 }
 
+const NAV_ITEMS = [
+  ['count', CountIcon, 'Count'],
+  ['feed', FeedIcon, 'Feed'],
+  ['ranks', RanksIcon, 'Ranks'],
+  ['explore', ExploreIcon, 'Explore'],
+]
+
 function BottomNav({ tab, setTab }) {
-  const items = [
-    ['count', '🌮', 'Count'],
-    ['feed', '📱', 'Feed'],
-    ['ranks', '🏆', 'Ranks'],
-    ['explore', '🗺️', 'Explore'],
-  ]
+  const activeIndex = Math.max(0, NAV_ITEMS.findIndex(([id]) => id === tab))
   return (
-    <nav className="nav">
-      {items.map(([id, icon, label]) => {
-        const active = tab === id
-        return (
-          <button key={id} className="nav__item" data-active={active || undefined} onClick={() => setTab(id)} aria-current={active ? 'page' : undefined}>
-            <span className="nav__icon">{icon}</span>
-            <span>{label}</span>
-          </button>
-        )
-      })}
+    <nav className="nav" aria-label="Sections">
+      {/* Four equal columns, so the indicator can be positioned arithmetically
+          instead of measuring the DOM — no refs, and resize-proof for free. */}
+      <div className="nav__bar" style={{ '--nav-count': NAV_ITEMS.length, '--nav-active': activeIndex }}>
+        <span className="nav__indicator" aria-hidden="true" />
+        {NAV_ITEMS.map(([id, IconComponent, label]) => {
+          const active = tab === id
+          return (
+            <button
+              key={id}
+              className="nav__item"
+              data-active={active || undefined}
+              onClick={() => setTab(id)}
+              aria-current={active ? 'page' : undefined}
+              aria-label={label}
+              title={label}
+            >
+              <IconComponent />
+            </button>
+          )
+        })}
+      </div>
     </nav>
   )
 }

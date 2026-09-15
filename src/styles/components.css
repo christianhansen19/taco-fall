@@ -3,7 +3,7 @@
 /* --- surfaces ------------------------------------------------------- */
 
 .card {
-  background: var(--surface);
+  background: var(--surface-grad);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 18px;
@@ -71,16 +71,15 @@
 }
 
 .btn--primary {
-  background: var(--chili);
-  border-color: var(--chili);
-  color: var(--on-accent);
-  box-shadow: var(--shadow-sm);
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: var(--on-chili);
+  box-shadow: var(--shadow-md);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: var(--chili-deep);
-  border-color: var(--chili-deep);
-  box-shadow: var(--shadow-md);
+  filter: brightness(1.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn--ghost {
@@ -182,8 +181,8 @@
 }
 
 .seg__btn[data-active] {
-  background: var(--chili);
-  color: var(--on-accent);
+  background: var(--accent-grad);
+  color: var(--on-chili);
   box-shadow: var(--shadow-sm);
 }
 
@@ -359,9 +358,9 @@
 }
 
 .banner[data-locked] {
-  background: var(--chili);
-  border-color: var(--chili);
-  color: var(--on-accent);
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: var(--on-chili);
 }
 
 .banner__stat {
@@ -372,7 +371,7 @@
 }
 
 .banner[data-locked] .banner__stat {
-  color: var(--on-accent);
+  color: var(--on-chili);
 }
 
 /* --- podium ---------------------------------------------------------

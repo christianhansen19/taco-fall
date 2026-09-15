@@ -14,7 +14,9 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* Fixed so the wash stays put while the page scrolls, rather than sliding
+     past and drawing attention to itself. */
+  background: var(--page-bg) var(--bg) fixed;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;

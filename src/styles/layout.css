@@ -2,7 +2,6 @@
 
 .page {
   min-height: 100%;
-  background: var(--bg);
   color: var(--ink);
 }
 
@@ -72,8 +71,8 @@
   max-width: var(--content-max);
   margin: 0 auto 10px;
   padding: 7px 14px;
-  background: var(--chili);
-  color: var(--on-accent);
+  background: var(--accent-grad);
+  color: var(--on-chili);
   border-radius: var(--r-pill);
   text-align: center;
   font-weight: 700;
@@ -97,6 +96,7 @@
 
 /* --- bottom nav ----------------------------------------------------- */
 
+/* Floating glass pill, lifted clear of the bottom edge. */
 .nav {
   position: fixed;
   left: 0;
@@ -105,58 +105,79 @@
   z-index: 50;
   display: flex;
   justify-content: center;
-  gap: 2px;
-  padding: 6px max(var(--gutter), env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom))
-    max(var(--gutter), env(safe-area-inset-right));
-  background: var(--glass);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-top: 1px solid var(--glass-border);
+  padding: 0 max(16px, env(safe-area-inset-left)) calc(14px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-right));
+  pointer-events: none;
+}
+
+.nav__bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--nav-count), 1fr);
+  width: 100%;
+  max-width: 340px;
+  padding: 7px;
+  border-radius: var(--r-pill);
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+/* Equal columns mean the indicator is pure arithmetic — no measuring. */
+.nav__indicator {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 7px;
+  width: calc((100% - 14px) / var(--nav-count));
+  border-radius: var(--r-pill);
+  background: var(--nav-pill);
+  transform: translateX(calc(var(--nav-active) * 100%));
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nav__item {
-  flex: 1 1 0;
-  max-width: 140px;
+  position: relative;
+  z-index: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 8px 4px 6px;
+  min-height: 44px;
+  padding: 0;
   border: none;
-  border-radius: var(--r-md);
+  border-radius: var(--r-pill);
   background: none;
   cursor: pointer;
-  color: var(--ink-soft);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  color: var(--nav-fg);
+  opacity: 0.6;
   transition:
-    color 0.18s ease,
-    background 0.18s ease;
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nav__item:hover {
-  color: var(--ink);
+  opacity: 0.85;
 }
 
 .nav__item[data-active] {
-  color: var(--chili);
-  background: var(--chili-wash);
+  opacity: 1;
+}
+
+.nav__item:active {
+  transform: scale(0.92);
 }
 
 .nav__icon {
-  font-size: 21px;
-  line-height: 1;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 23px;
+  height: 23px;
+  display: block;
 }
 
 .nav__item[data-active] .nav__icon {
-  transform: translateY(-1px) scale(1.12);
-}
-
-.nav__item:not([data-active]) .nav__icon {
-  filter: grayscale(0.35) opacity(0.8);
+  stroke-width: 2.1;
 }
 
 /* --- breakpoints ---------------------------------------------------- */
@@ -171,8 +192,8 @@
     font-size: 22px;
   }
 
-  .nav {
-    gap: 6px;
+  .nav__bar {
+    max-width: 380px;
   }
 }
 
