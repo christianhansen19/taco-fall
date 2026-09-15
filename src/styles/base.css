@@ -6,17 +6,21 @@
   box-sizing: border-box;
 }
 
+/* Deliberately min-height, not height: 100%. A hard 100% chain makes iOS
+   measure a non-scrollable page against a viewport that still reserves room
+   for browser chrome, which floats position:fixed elements well above the
+   bottom edge on short pages while long ones sit correctly. dvh tracks the
+   real viewport instead. */
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
-  /* Fixed so the wash stays put while the page scrolls, rather than sliding
-     past and drawing attention to itself. */
-  background: var(--page-bg) var(--bg) fixed;
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;
@@ -24,6 +28,17 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* The wash rides a fixed layer rather than background-attachment: fixed, which
+   iOS has never handled reliably. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--page-bg);
+  pointer-events: none;
 }
 
 button,

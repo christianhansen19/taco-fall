@@ -1,7 +1,8 @@
 /* Page shell, header, content column, bottom nav — and every breakpoint. */
 
 .page {
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   color: var(--ink);
 }
 
@@ -105,7 +106,11 @@
   z-index: 50;
   display: flex;
   justify-content: center;
-  padding: 0 max(16px, env(safe-area-inset-left)) calc(14px + env(safe-area-inset-bottom))
+  /* max(), not calc(+). iOS resolves safe-area-inset-bottom differently on a
+     scrollable page than on one that fits, and adding the two made the bar sit
+     dozens of points higher on short tabs than on long ones. max() pins the gap
+     to a single value either way. */
+  padding: 0 max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-right));
   pointer-events: none;
 }
