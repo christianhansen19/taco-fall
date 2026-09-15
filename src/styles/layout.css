@@ -8,24 +8,19 @@
 
 /* --- header --------------------------------------------------------- */
 
+/* Deliberately opaque, with no backdrop-filter. iOS rasterises the whole
+   subtree of a backdrop-filtered element into a composited layer and resamples
+   it, which left the wordmark, controls and countdown visibly soft against a
+   crisp status bar. Moving the filter to a ::before layer did not help — the
+   promotion applies to the header's descendants either way. The only reliable
+   fix is not to composite the header at all.
+   The nav keeps its glass: it carries icons, not type. */
 .header {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: var(--header-bg);
   border-bottom: 1px solid var(--glass-border);
-}
-
-/* The blur sits on its own layer rather than on the element holding the text.
-   WebKit rasterises a backdrop-filtered element's own content into the
-   composited layer, which visibly softens type on iOS. */
-.header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--glass);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
 .header__inner {

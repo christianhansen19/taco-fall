@@ -738,9 +738,9 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(24, 12, 10, 0.55);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* No backdrop-filter: the sheet is a child of this element, so filtering here
+     drags every field and label in the modal onto the composited layer too. */
+  background: rgba(24, 12, 10, 0.62);
   animation: fade-in 0.2s ease;
 }
 

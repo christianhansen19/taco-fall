@@ -44,6 +44,9 @@
   --glass: rgba(251, 243, 231, 0.72);
   --glass-strong: rgba(255, 255, 255, 0.82);
   --glass-border: rgba(176, 48, 47, 0.14);
+  /* Opaque, and tuned to the top of --page-bg so the bar reads as part of the
+     page rather than a band laid over it. */
+  --header-bg: linear-gradient(180deg, #fdf6ea 0%, #faf0e1 100%);
 
   /* Washes of the palette bled into the page so the background has depth
      without ever competing with the content sitting on it. */
@@ -102,6 +105,7 @@
   --glass: rgba(30, 21, 23, 0.72);
   --glass-strong: rgba(42, 31, 33, 0.86);
   --glass-border: rgba(247, 237, 224, 0.12);
+  --header-bg: linear-gradient(180deg, #2a1d20 0%, #231a1c 100%);
 
   --page-bg:
     radial-gradient(1100px 620px at 8% -8%, rgba(235, 143, 44, 0.16), transparent 62%),
