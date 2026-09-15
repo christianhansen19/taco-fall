@@ -21,6 +21,14 @@ const LOCK = new Date('2026-12-10T00:00:00-07:00')
 const FALL_EMOJIS = ['🌮', '🌮', '🌮', '🌮', '🌯', '🥑', '🌶️', '🧀', '🫓']
 const CTRL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
 
+// CARTO started requiring a key for raster basemaps in Aug 2026. Without one the
+// tiles still load but carry an "API KEY REQUIRED" watermark. Vite inlines this
+// into the bundle, so it is public once deployed — restrict it by domain in the
+// CARTO dashboard rather than treating it as a secret.
+const CARTO_SUFFIX = import.meta.env.VITE_CARTO_KEY ? `?key=${import.meta.env.VITE_CARTO_KEY}` : ''
+const CARTO_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -979,7 +987,7 @@ function BoardTab({ players, myKey, locked }) {
   )
 }
 
-function MapTab({ entries }) {
+function MapTab({ entries, theme }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -987,9 +995,8 @@ function MapTab({ entries }) {
     const map = L.map(containerRef.current, { scrollWheelZoom: false, zoomControl: false, attributionControl: false }).setView([39.5, -98.35], 3)
     L.control.zoom({ position: 'topright' }).addTo(map)
     L.control.attribution({ prefix: false }).addTo(map)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      attribution: '© OSM © CARTO',
+    L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/${theme === 'dark' ? 'dark_all' : 'voyager'}/{z}/{x}/{y}{r}.png${CARTO_SUFFIX}`, {
+      attribution: CARTO_ATTRIBUTION,
       maxZoom: 20,
     }).addTo(map)
 
@@ -1020,7 +1027,7 @@ function MapTab({ entries }) {
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 })
 
     return () => map.remove()
-  }, [entries])
+  }, [entries, theme])
 
   const pinnedCount = entries.filter((e) => e.location && e.location.lat != null).length
   const homemadeCount = sumQty(entries.filter((e) => isHomemade(e.location)))
@@ -1310,7 +1317,7 @@ function FeedTab({ entries, myKey, locked, onEdit }) {
   )
 }
 
-function ExploreTab({ entries, myKey }) {
+function ExploreTab({ entries, myKey, theme }) {
   const [view, setView] = useState('map')
   return (
     <div>
@@ -1322,7 +1329,7 @@ function ExploreTab({ entries, myKey }) {
           📊 Matrix
         </button>
       </div>
-      {view === 'map' ? <MapTab entries={entries} /> : <MatrixTab entries={entries} myKey={myKey} />}
+      {view === 'map' ? <MapTab entries={entries} theme={theme} /> : <MatrixTab entries={entries} myKey={myKey} />}
     </div>
   )
 }
@@ -1366,7 +1373,7 @@ function RulesModal({ onClose }) {
 // ---------------------------------------------------------------------------
 
 export default function App() {
-  const { pref: themePref, cycleTheme } = useTheme()
+  const { pref: themePref, resolved: theme, cycleTheme } = useTheme()
   const [user, setUser] = useState(undefined) // undefined = auth loading, null = signed out
   const [signingIn, setSigningIn] = useState(false)
   const [signInError, setSignInError] = useState('')
@@ -1607,7 +1614,7 @@ export default function App() {
             )}
             {tab === 'feed' && <FeedTab entries={allEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} />}
             {tab === 'ranks' && <RanksTab players={players} entries={allEntries} myKey={myKey} locked={locked} />}
-            {tab === 'explore' && <ExploreTab entries={allEntries} myKey={myKey} />}
+            {tab === 'explore' && <ExploreTab entries={allEntries} myKey={myKey} theme={theme} />}
           </main>
           <BottomNav tab={tab} setTab={setTab} />
         </>
