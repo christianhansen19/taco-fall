@@ -9,7 +9,6 @@ const LEGACY_KEY = 'tacoTheme_v1'
 const CHROME = { light: '#FBF3E7', dark: '#1E1517' }
 
 export const THEME_CYCLE = ['system', 'light', 'dark']
-export const THEME_ICON = { system: '🖥️', light: '☀️', dark: '🌙' }
 export const THEME_LABEL = { system: 'Match system theme', light: 'Light theme', dark: 'Dark theme' }
 
 function readPref() {

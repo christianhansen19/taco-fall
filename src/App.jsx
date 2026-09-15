@@ -6,9 +6,19 @@ import L from 'leaflet'
 import { auth, db, googleProvider, storage } from './firebase'
 import { applyEntries, clamp, entryQty, mergeEntry, QTY_MAX, QTY_MIN, removeLastUpdater, sumQty } from './lib/qty'
 import { DEMO, DEMO_ADMINS, DEMO_USER, demoPlayers } from './lib/demo'
-import { THEME_ICON, THEME_LABEL, useTheme } from './theme'
+import { THEME_LABEL, useTheme } from './theme'
 import PapelPicado, { ConfettiFlag, CONFETTI_COLORS } from './components/PapelPicado'
-import { CountIcon, ExploreIcon, FeedIcon, RanksIcon } from './components/NavIcons'
+import {
+  AdminIcon,
+  CountIcon,
+  DarkThemeIcon,
+  ExploreIcon,
+  FeedIcon,
+  InfoIcon,
+  LightThemeIcon,
+  RanksIcon,
+  SystemThemeIcon,
+} from './components/Icons'
 
 // ---------------------------------------------------------------------------
 // Config
@@ -798,15 +808,15 @@ function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOp
           <span className="wordmark__mark">🌮</span> Taco Fall
         </div>
         <div className="header__actions">
-          <button className="btn btn--icon" onClick={onInfoOpen} aria-label="Rules &amp; info">
-            ℹ️
+          <button className="btn btn--icon" onClick={onInfoOpen} aria-label="Rules &amp; info" title="Rules &amp; info">
+            <InfoIcon />
           </button>
           <button className="btn btn--icon" onClick={onCycleTheme} aria-label={THEME_LABEL[themePref]} title={THEME_LABEL[themePref]}>
-            {THEME_ICON[themePref]}
+            {themePref === 'light' ? <LightThemeIcon /> : themePref === 'dark' ? <DarkThemeIcon /> : <SystemThemeIcon />}
           </button>
           {showAdmin && (
-            <button className="btn btn--icon" onClick={onAdminOpen} aria-label="Admin">
-              🔧
+            <button className="btn btn--icon" onClick={onAdminOpen} aria-label="Admin" title="Admin">
+              <AdminIcon />
             </button>
           )}
         </div>

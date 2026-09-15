@@ -102,7 +102,17 @@
   padding: 0;
   border-radius: var(--r-md);
   background: var(--glass-strong);
-  font-size: 16px;
+  color: var(--ink-soft);
+}
+
+.btn--icon:hover:not(:disabled) {
+  color: var(--chili);
+}
+
+.ui-icon {
+  width: 19px;
+  height: 19px;
+  display: block;
 }
 
 .btn-link {
