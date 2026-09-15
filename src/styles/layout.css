@@ -12,10 +12,20 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--glass);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
   border-bottom: 1px solid var(--glass-border);
+}
+
+/* The blur sits on its own layer rather than on the element holding the text.
+   WebKit rasterises a backdrop-filtered element's own content into the
+   composited layer, which visibly softens type on iOS. */
+.header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
 .header__inner {
@@ -123,12 +133,21 @@
   max-width: 430px;
   padding: 7px;
   border-radius: var(--r-pill);
-  background: var(--nav-bg);
   border: 1px solid var(--nav-border);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
+}
+
+/* Same reason as .header::before — keeps the icons off the blurred layer. */
+.nav__bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--nav-bg);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
 /* Equal columns mean the indicator is pure arithmetic — no measuring. */
