@@ -1,0 +1,91 @@
+/* Palette drawn from the Mexican reference swatches, with neutrals added and
+   accents re-tuned for dark. Contrast figures are measured against the surface
+   each colour actually sits on.
+
+   The one rule to hold: --marigold is a FILL, never text on a light surface.
+   Use --marigold-deep for large text/UI, and chili/cactus/talavera/rosa for
+   anything at body size. */
+
+:root {
+  color-scheme: light;
+
+  --bg: #fbf3e7;
+  --bg-sunk: #f3e7d4;
+  --surface: #ffffff;
+  --surface-soft: #f8eee0;
+  --ink: #2a1a17;
+  --ink-soft: #7a6257;
+  --line: #ead9c2;
+  --line-strong: #dbc4a5;
+
+  --chili: #b0302f; /* primary — 6.3:1 on white */
+  --chili-deep: #8c2424;
+  --chili-wash: rgba(176, 48, 47, 0.08);
+  --marigold: #eb8f2c; /* decorative fill only — 2.5:1 */
+  --marigold-deep: #cf6a00; /* 3.7:1 — large text and UI only */
+  --talavera: #3575a2; /* 5.0:1 */
+  --cactus: #276124; /* 7.7:1 */
+  --rosa: #b0367f; /* 5.7:1 */
+
+  --gold: #cf9a2c;
+  --silver: #9a9188;
+  --bronze: #a9673a;
+
+  --on-accent: #fff8ef;
+
+  --shadow-sm: 0 1px 2px rgba(74, 40, 30, 0.06), 0 2px 6px rgba(74, 40, 30, 0.05);
+  --shadow-md: 0 2px 4px rgba(74, 40, 30, 0.06), 0 8px 20px rgba(74, 40, 30, 0.08);
+  --shadow-lg: 0 4px 8px rgba(74, 40, 30, 0.08), 0 18px 44px rgba(74, 40, 30, 0.14);
+
+  --glass: rgba(251, 243, 231, 0.72);
+  --glass-strong: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(176, 48, 47, 0.14);
+
+  --font-display: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  --content-max: 640px;
+  --gutter: 18px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #1e1517;
+  --bg-sunk: #170f11;
+  --surface: #2a1f21;
+  --surface-soft: #352a2c;
+  --ink: #f7ede0;
+  --ink-soft: #c4ac9c;
+  --line: #463639;
+  --line-strong: #5a4649;
+
+  --chili: #e05553; /* 4.8:1 on --bg */
+  --chili-deep: #b0302f;
+  --chili-wash: rgba(224, 85, 83, 0.14);
+  --marigold: #f0a552;
+  --marigold-deep: #eb8f2c;
+  --talavera: #6fa5ce;
+  --cactus: #6fa95c;
+  --rosa: #d96bab;
+
+  --gold: #e8bd63;
+  --silver: #b2a79c;
+  --bronze: #c78a5c;
+
+  --on-accent: #2a1a17;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.32), 0 8px 20px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.36), 0 18px 44px rgba(0, 0, 0, 0.46);
+
+  --glass: rgba(30, 21, 23, 0.72);
+  --glass-strong: rgba(42, 31, 33, 0.86);
+  --glass-border: rgba(247, 237, 224, 0.12);
+}

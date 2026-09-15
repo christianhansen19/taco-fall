@@ -1,0 +1,175 @@
+/* Feed tab — photo cards and text posts. */
+
+.feed-head {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+
+.feed-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.post {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.post:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.post[data-mine] {
+  border-color: var(--chili);
+}
+
+.post[data-untagged] {
+  border-style: dashed;
+}
+
+.post__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.post__ident {
+  flex: 1;
+  min-width: 0;
+}
+
+.post__name {
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post__sub {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.post__time {
+  color: var(--ink-soft);
+  font-size: 12px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.post__photo {
+  width: 100%;
+  display: block;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--surface-soft);
+}
+
+.post__body {
+  padding: 12px 14px 14px;
+}
+
+.post__rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.post__caption {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.post__text {
+  font-size: 15px;
+  line-height: 1.55;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.post__text--muted {
+  color: var(--ink-soft);
+}
+
+.post__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.post__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.post--text {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+}
+
+.post--text .post__ident {
+  display: flex;
+  flex-direction: column;
+}
+
+.post__edit {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--chili);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.chip--qty {
+  background: var(--chili-wash);
+  border-color: transparent;
+  color: var(--chili);
+}
+
+.untagged-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.empty {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--ink-soft);
+}

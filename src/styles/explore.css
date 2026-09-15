@@ -1,0 +1,150 @@
+/* Explore tab — Leaflet map and the taste matrix.
+   Leaflet's own stylesheet is loaded from a CDN and ships bare-element rules,
+   so everything here stays class-scoped to avoid leaking into its controls. */
+
+.map {
+  height: 380px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+/* The pin markup carries its own gradient and drop shadow, so this only needs
+   to stop Leaflet's default icon styling from interfering. */
+.taco-pin {
+  background: none;
+  border: none;
+}
+
+.matrix {
+  position: relative;
+  width: 100%;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.matrix__axis-h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.matrix__axis-v {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px dashed var(--line-strong);
+}
+
+.matrix__label {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.matrix__label--top {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.matrix__label--bottom {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.matrix__label--left {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.matrix__label--right {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.matrix__pt {
+  position: absolute;
+  left: var(--matrix-x, 50%);
+  top: var(--matrix-y, 50%);
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  filter: drop-shadow(0 0 4px hsl(var(--pin-hue, 0) 70% 45%));
+}
+
+.matrix__pt--big {
+  font-size: 26px;
+}
+
+.matrix__pt--clickable {
+  cursor: pointer;
+}
+
+.matrix__cursor {
+  position: absolute;
+  left: var(--matrix-x, 50%);
+  top: var(--matrix-y, 50%);
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+}
+
+.matrix__active {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.diary-row {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.diary-row[data-mine] {
+  border-color: var(--chili);
+}
+
+.critic-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.critic-row:last-child {
+  border-bottom: none;
+}
+
+.star {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.star__bg {
+  color: var(--line-strong);
+}
+
+.star__fill {
+  color: var(--chili);
+}

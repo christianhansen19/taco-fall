@@ -1,0 +1,205 @@
+/* Page shell, header, content column, bottom nav — and every breakpoint. */
+
+.page {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* --- header --------------------------------------------------------- */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--glass);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.header__inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: calc(12px + env(safe-area-inset-top)) var(--gutter) 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 19px;
+  color: var(--chili);
+}
+
+.wordmark__mark {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.header__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.countdown {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.countdown__unit {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lock-banner {
+  max-width: var(--content-max);
+  margin: 0 auto 10px;
+  padding: 7px 14px;
+  background: var(--chili);
+  color: var(--on-accent);
+  border-radius: var(--r-pill);
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  width: fit-content;
+}
+
+/* --- content -------------------------------------------------------- */
+
+.content {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 22px var(--gutter) calc(110px + env(safe-area-inset-bottom));
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- bottom nav ----------------------------------------------------- */
+
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px max(var(--gutter), env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom))
+    max(var(--gutter), env(safe-area-inset-right));
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--glass-border);
+}
+
+.nav__item {
+  flex: 1 1 0;
+  max-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px 6px;
+  border: none;
+  border-radius: var(--r-md);
+  background: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.nav__item:hover {
+  color: var(--ink);
+}
+
+.nav__item[data-active] {
+  color: var(--chili);
+  background: var(--chili-wash);
+}
+
+.nav__icon {
+  font-size: 21px;
+  line-height: 1;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav__item[data-active] .nav__icon {
+  transform: translateY(-1px) scale(1.12);
+}
+
+.nav__item:not([data-active]) .nav__icon {
+  filter: grayscale(0.35) opacity(0.8);
+}
+
+/* --- breakpoints ---------------------------------------------------- */
+
+@media (min-width: 768px) {
+  :root {
+    --content-max: 760px;
+    --gutter: 28px;
+  }
+
+  .wordmark {
+    font-size: 22px;
+  }
+
+  .nav {
+    gap: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --content-max: 980px;
+  }
+
+  .content {
+    padding-top: 30px;
+  }
+
+  /* Ranks reads better as podium beside the list once there's room. */
+  .ranks-split {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+    gap: 26px;
+    align-items: start;
+  }
+
+  .feed-wrap {
+    column-count: 2;
+    column-gap: 18px;
+  }
+
+  .feed-wrap > * {
+    break-inside: avoid;
+    margin-bottom: 18px;
+  }
+}

@@ -1,0 +1,66 @@
+/* Animations, plus the papel picado banner.
+   prefers-reduced-motion is handled once, in base.css. */
+
+@keyframes bfall {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(var(--sway, 0px)) rotate(360deg);
+    opacity: 0.9;
+  }
+}
+
+.bfall-emoji {
+  position: fixed;
+  top: 0;
+  pointer-events: none;
+  z-index: 9999;
+  animation-name: bfall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* --- papel picado ---------------------------------------------------
+   Cut-paper pennants, drawn as inline SVG so each flag can carry a real
+   palette token and follow the theme. */
+
+.papel {
+  display: block;
+  width: 100%;
+  height: 22px;
+  pointer-events: none;
+}
+
+.papel--divider {
+  height: 22px;
+  opacity: 0.8;
+  margin: 4px 0 16px;
+}
+
+.papel__string {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  fill: none;
+}

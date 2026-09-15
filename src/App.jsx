@@ -4,214 +4,22 @@ import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import L from 'leaflet'
 import { auth, db, googleProvider, storage } from './firebase'
+import { applyEntries, clamp, entryQty, mergeEntry, QTY_MAX, QTY_MIN, removeLastUpdater, sumQty } from './lib/qty'
+import { DEMO, DEMO_USER, demoPlayers } from './lib/demo'
+import { THEME_ICON, THEME_LABEL, useTheme } from './theme'
+import PapelPicado from './components/PapelPicado'
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
 const ROOT = 'tacos'
-const THEME_KEY = 'tacoTheme_v1'
 const ADMIN_PW = 'ualumni'
 const NOTES_MAX = 280
 // Midnight ending Dec 9, 2026, Mountain time.
 const LOCK = new Date('2026-12-10T00:00:00-07:00')
 const FALL_EMOJIS = ['🌮', '🌮', '🌮', '🌮', '🌯', '🥑', '🌶️', '🧀', '🫓']
 const CTRL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
-
-// ---------------------------------------------------------------------------
-// Theme tokens — every color in the app routes through `th`, never hardcoded.
-// ---------------------------------------------------------------------------
-
-const LT = {
-  bg: '#F1EAD7',
-  card: '#FFFFFF',
-  cardSoft: '#FBF4E6',
-  text: '#2E272A',
-  subt: '#7A6F6A',
-  line: '#E4D7BE',
-  salsa: '#AA182B',
-  salsaD: '#B2123C',
-  masa: '#D9A15C',
-  cilantro: '#9FC14F',
-  cilantroSoft: '#BED38E',
-  tortilla: '#8D3F2D',
-  tabInactive: '#8B7F78',
-  shadow: 'rgba(46,39,42,0.12)',
-  gold: '#D9A15C',
-  silver: '#C9C2B8',
-  bronze: '#8D3F2D',
-  glow1: 'rgba(170,24,43,0.12)',
-  glow2: 'rgba(159,193,79,0.12)',
-  glass: 'rgba(251,244,230,0.62)',
-  glassStrong: 'rgba(251,244,230,0.78)',
-  glassBorder: 'rgba(141,63,45,0.18)',
-}
-
-const DT = {
-  bg: '#2E272A',
-  card: '#3A3235',
-  cardSoft: '#443A3D',
-  text: '#F1EAD7',
-  subt: '#C9BBA8',
-  line: '#4F4448',
-  salsa: '#D93A5A',
-  salsaD: '#B2123C',
-  masa: '#E0B876',
-  cilantro: '#AFCB68',
-  cilantroSoft: '#BED38E',
-  tortilla: '#B2664B',
-  tabInactive: '#8F8385',
-  shadow: 'rgba(0,0,0,0.4)',
-  gold: '#E0B876',
-  silver: '#8F8385',
-  bronze: '#B2664B',
-  glow1: 'rgba(217,58,90,0.18)',
-  glow2: 'rgba(175,203,104,0.15)',
-  glass: 'rgba(46,39,42,0.55)',
-  glassStrong: 'rgba(58,50,53,0.72)',
-  glassBorder: 'rgba(241,234,215,0.14)',
-}
-
-function styles(th) {
-  return {
-    page: { minHeight: '100vh', background: th.bg, color: th.text, fontFamily: 'Nunito, sans-serif', paddingBottom: 40 },
-    header: {
-      position: 'sticky',
-      top: 0,
-      zIndex: 10,
-      background: th.glass,
-      backdropFilter: 'blur(22px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(22px) saturate(180%)',
-      borderBottom: `1px solid ${th.glassBorder}`,
-      padding: 'calc(14px + env(safe-area-inset-top)) 18px 14px',
-    },
-    headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    logo: { fontFamily: 'Rye, serif', fontSize: 20, color: th.salsa },
-    wordmark: {
-      fontFamily: 'Rye, serif',
-      fontSize: 20,
-      color: th.salsa,
-      letterSpacing: 0.5,
-      padding: '6px 14px',
-      borderRadius: 12,
-      background: th.glassStrong,
-      backdropFilter: 'blur(14px) saturate(160%)',
-      WebkitBackdropFilter: 'blur(14px) saturate(160%)',
-      border: `1px solid ${th.glassBorder}`,
-      boxShadow: `0 2px 10px ${th.shadow}`,
-    },
-    iconBtn: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 16 },
-    countdownBar: { marginTop: 10, fontSize: 13, color: th.subt, textAlign: 'center' },
-    lockBanner: { marginTop: 10, background: th.salsa, color: '#fff', textAlign: 'center', borderRadius: 10, padding: '6px 10px', fontWeight: 700 },
-    content: { maxWidth: 640, margin: '0 auto', padding: '22px 18px', paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' },
-    bottomNav: {
-      position: 'fixed',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 50,
-      display: 'flex',
-      maxWidth: 640,
-      margin: '0 auto',
-      background: th.glass,
-      backdropFilter: 'blur(24px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-      borderTop: `1px solid ${th.glassBorder}`,
-      paddingBottom: 'env(safe-area-inset-bottom)',
-      boxShadow: `0 -4px 24px ${th.shadow}`,
-    },
-    navItem: (active) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '10px 4px 8px', background: 'none', border: 'none', borderTop: `2px solid ${active ? th.salsa : 'transparent'}`, marginTop: -1, cursor: 'pointer', color: active ? th.salsa : th.tabInactive, fontWeight: 700, fontSize: 11 }),
-    navIcon: (active) => ({ fontSize: 23, lineHeight: 1, transform: active ? 'scale(1.1)' : 'none', filter: active ? 'none' : 'grayscale(0.25) opacity(0.85)' }),
-    segRow: { display: 'flex', gap: 4, background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 999, padding: 4, marginBottom: 18 },
-    segBtn: (active) => ({ flex: 1, padding: '10px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: active ? th.salsa : 'transparent', color: active ? '#fff' : th.tabInactive }),
-    feedEditBtn: { background: 'none', border: 'none', color: th.salsa, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0, whiteSpace: 'nowrap', marginTop: 2 },
-    tabs: { display: 'flex', gap: 6, overflowX: 'auto', marginTop: 10, paddingBottom: 4 },
-    tab: (active) => ({
-      flex: '0 0 auto',
-      padding: '8px 14px',
-      borderRadius: 999,
-      border: `1px solid ${active ? th.salsa : th.line}`,
-      background: active ? th.salsa : th.cardSoft,
-      color: active ? '#fff' : th.tabInactive,
-      fontWeight: 700,
-      cursor: 'pointer',
-      fontSize: 13,
-    }),
-    card: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, padding: 18, boxShadow: `0 4px 14px ${th.shadow}` },
-    cardTitle: { fontFamily: 'Rye, serif', fontSize: 15, marginBottom: 10, color: th.text },
-    sectionHeader: { fontFamily: 'Rye, serif', fontSize: 14, marginBottom: 10, color: th.text },
-    subt: { color: th.subt, fontSize: 13 },
-    bigNumber: { fontFamily: 'Rye, serif', fontSize: 40, color: th.salsa },
-    bigCount: { fontFamily: 'Rye, serif', fontSize: 72, color: th.salsa, margin: '12px 0' },
-    countBtn: { border: `1px solid ${th.line}`, background: th.cardSoft, color: th.text, borderRadius: 16, padding: '14px 24px', fontSize: 20, fontWeight: 800, cursor: 'pointer' },
-    countBtnPrimary: { background: th.salsa, color: '#fff', border: 'none' },
-    badgeChip: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 999, padding: '4px 10px', fontSize: 12 },
-    badgeCell: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 12, padding: 10, textAlign: 'center' },
-    input: { width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${th.line}`, background: th.card, color: th.text, fontSize: 15, marginTop: 4 },
-    textarea: { width: '100%', minHeight: 70, padding: '10px 12px', borderRadius: 10, border: `1px solid ${th.line}`, background: th.card, color: th.text, fontSize: 14, marginTop: 4, resize: 'vertical' },
-    primaryBtn: { background: th.salsa, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 18px', fontWeight: 700, cursor: 'pointer', fontSize: 14 },
-    ghostBtn: { background: 'transparent', color: th.text, border: `1px solid ${th.line}`, borderRadius: 12, padding: '10px 18px', fontWeight: 700, cursor: 'pointer', fontSize: 14 },
-    ghostBtnSm: { background: 'transparent', color: th.salsa, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 },
-    chipBtn: { background: th.cardSoft, color: th.text, border: `1px solid ${th.line}`, borderRadius: 999, padding: '6px 12px', fontSize: 13, cursor: 'pointer', marginTop: 8 },
-    linkBtn: { background: 'none', border: 'none', color: th.subt, cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0 },
-    linkBtnDanger: { background: 'none', border: 'none', color: th.salsaD, cursor: 'pointer', fontSize: 12, fontWeight: 700, textDecoration: 'underline', padding: 0 },
-    modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
-    modalCard: { background: th.card, color: th.text, borderRadius: '20px 20px 0 0', padding: '14px 20px calc(20px + env(safe-area-inset-bottom))', width: '100%', maxWidth: 480, maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
-    sheetHandle: { width: 40, height: 5, borderRadius: 3, background: th.line, margin: '0 auto 12px' },
-    modalTitle: { fontFamily: 'Rye, serif', fontSize: 18, marginBottom: 14 },
-    photoBtnRow: { display: 'flex', gap: 10 },
-    photoBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, background: th.cardSoft, color: th.text, border: `1px dashed ${th.line}`, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
-    photoFrame: { position: 'relative', marginTop: 4 },
-    photoImg: { width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 12, display: 'block' },
-    photoRemove: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 },
-    hiddenFile: { position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' },
-    fieldLabel: { fontWeight: 700, fontSize: 13, marginTop: 14, marginBottom: 4, color: th.subt },
-    autocompleteBox: { position: 'absolute', top: '100%', left: 0, right: 0, background: th.card, border: `1px solid ${th.line}`, borderRadius: 10, marginTop: 4, zIndex: 20, maxHeight: 200, overflowY: 'auto' },
-    autocompleteRow: { padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: `1px solid ${th.line}` },
-    matrixBox: { position: 'relative', width: '100%', background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: 16, touchAction: 'none', userSelect: 'none' },
-    matrixAxisLabelTop: { position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 11, color: th.subt },
-    matrixAxisLabelBottom: { position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 11, color: th.subt },
-    matrixAxisLabelLeft: { position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: th.subt },
-    matrixAxisLabelRight: { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: th.subt },
-    matrixActiveCard: { position: 'absolute', left: 8, bottom: 8, background: th.card, border: `1px solid ${th.line}`, borderRadius: 10, padding: 8, fontSize: 12 },
-    matrixChip: { display: 'inline-block', marginTop: 4, fontSize: 11, background: th.cardSoft, borderRadius: 999, padding: '2px 8px' },
-    diaryRow: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 14, padding: 12 },
-    untaggedHint: { marginTop: 6, fontSize: 12, color: th.subt },
-    photoThumb: { width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 10, margin: '8px 0' },
-    photoPreview: { maxWidth: '100%', maxHeight: 200, borderRadius: 10, marginTop: 8, display: 'block' },
-    // Feed tab — Instagram-style photo cards, Threads-style text posts
-    feedWrap: { display: 'flex', flexDirection: 'column', gap: 18 },
-    feedHead: { textAlign: 'center', fontSize: 13, color: th.subt, marginBottom: 12 },
-    avatar: (size) => ({ width: size, height: size, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flex: '0 0 auto', fontSize: Math.round(size * 0.42) }),
-    feedName: { fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-    feedTime: { color: th.subt, fontSize: 12, whiteSpace: 'nowrap' },
-    feedSub: { color: th.subt, fontSize: 12 },
-    igCard: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, overflow: 'hidden', boxShadow: `0 6px 18px ${th.shadow}` },
-    igHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' },
-    igPhoto: { width: '100%', display: 'block', aspectRatio: '1 / 1', objectFit: 'cover', background: th.cardSoft },
-    igBody: { padding: '12px 14px 14px' },
-    igActionRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 },
-    igCaption: { fontSize: 14, lineHeight: 1.45, wordBreak: 'break-word' },
-    thPost: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 16, padding: 14, display: 'flex', gap: 12 },
-    thBody: { flex: 1, minWidth: 0 },
-    thHeadRow: { display: 'flex', alignItems: 'center', gap: 6 },
-    thText: { fontSize: 15, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
-    thMetaRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 13, color: th.subt },
-    banner: { textAlign: 'center', borderRadius: 14, padding: '10px 14px', fontWeight: 700, marginBottom: 14 },
-    podiumRow: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, marginBottom: 10 },
-    podiumCol: { background: th.cardSoft, border: `1px solid ${th.line}`, borderRadius: '12px 12px 0 0', width: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 2, padding: 8, overflow: 'hidden' },
-    podiumName: { fontWeight: 700, fontSize: 12.5, textAlign: 'center', lineHeight: 1.15, width: '100%', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' },
-    listRow: { background: th.card, border: `1px solid ${th.line}`, borderRadius: 12, padding: 10 },
-    rowHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    rowName: { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-    rowCount: { flex: '0 0 auto', whiteSpace: 'nowrap' },
-    joinCard: { maxWidth: 420, margin: '60px auto', padding: 24, textAlign: 'center' },
-    googleBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 22, minHeight: 50, padding: '0 22px', background: th.card, color: th.text, border: `1px solid ${th.line}`, borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 3px 12px ${th.shadow}` },
-    googleG: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', background: '#fff', color: '#4285F4', fontWeight: 800, fontFamily: 'Nunito, sans-serif', border: '1px solid #dadce0' },
-    signInError: { marginTop: 14, fontSize: 13, color: th.salsa },
-    accountRow: { display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 2 },
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -230,7 +38,6 @@ function sanitizeNotes(raw) {
   return (raw || '')
     .replace(/<[^>]*>/g, '')
     .replace(CTRL_CHARS, '')
-    .replace(/[ \t]+/g, ' ')
     .trim()
     .slice(0, NOTES_MAX)
 }
@@ -248,10 +55,6 @@ function hashHue(str) {
   let h = 0
   for (let i = 0; i < (str || '').length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
   return h % 360
-}
-
-function clamp(n, lo, hi) {
-  return Math.max(lo, Math.min(hi, n))
 }
 
 function pad(n) {
@@ -286,7 +89,9 @@ function flattenEntries(players) {
   const out = []
   for (const [key, p] of Object.entries(players || {})) {
     const entries = p?.entries || {}
-    for (const [id, e] of Object.entries(entries)) out.push({ ...e, id, playerKey: key, playerName: p.name, playerPhoto: p.photoURL || null })
+    // qty is normalized here so every downstream read sees a real 1–20 integer
+    // even for legacy entries that predate the field.
+    for (const [id, e] of Object.entries(entries)) out.push({ ...e, qty: entryQty(e), id, playerKey: key, playerName: p.name, playerPhoto: p.photoURL || null })
   }
   return out
 }
@@ -320,6 +125,10 @@ function formatResultLabel(r) {
   return address ? `${name} · ${address}` : name
 }
 
+function pct(n) {
+  return `${Math.max(0, Math.min(100, n))}%`
+}
+
 // ---------------------------------------------------------------------------
 // Badges
 // ---------------------------------------------------------------------------
@@ -339,19 +148,23 @@ const BADGES = [
   { id: 'storyteller', emoji: '📜', label: 'Storyteller', hint: '5 tacos with real notes', test: (s) => s.storyteller >= 5 },
 ]
 
+// Takes { count, entries } where entries is a flattenEntries() ARRAY, not a
+// player node's entries object.
+// Badges worded "N tacos" sum qty; badges worded "N ratings" count entries,
+// because a rating is one act of judgement no matter how many tacos it covers.
 function computeStats(player) {
   const entries = player.entries || []
   const ratings = entries.map((e) => e.rating).filter((r) => r !== null && r !== undefined)
   return {
     count: player.count || 0,
     spots: distinctSpots(entries),
-    homemade: entries.filter((e) => isHomemade(e.location)).length,
+    homemade: sumQty(entries.filter((e) => isHomemade(e.location))),
     maxRating: ratings.length ? Math.max(...ratings) : 0,
     minRating: ratings.length ? Math.min(...ratings) : null,
     ratingCount: ratings.length,
     avgRating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0,
-    bullseye: entries.filter((e) => e.matrix && e.matrix.x > 0.3 && e.matrix.y > 0.3).length,
-    storyteller: entries.filter((e) => e.notes && e.notes.trim().length >= 4).length,
+    bullseye: sumQty(entries.filter((e) => e.matrix && e.matrix.x > 0.3 && e.matrix.y > 0.3)),
+    storyteller: sumQty(entries.filter((e) => e.notes && e.notes.trim().length >= 4)),
   }
 }
 
@@ -365,53 +178,31 @@ function earnedBadges(player) {
 // the parent player node so concurrent devices can't clobber each other.
 // ---------------------------------------------------------------------------
 
-async function logTacoWithId(key, id, entry) {
-  await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => {
-    if (!cur) return cur
-    const oldEntries = cur.entries || {}
-    const stubs = Math.max(0, (cur.count || 0) - Object.keys(oldEntries).length)
-    const entries = { ...oldEntries, [id]: entry }
-    cur.entries = entries
-    cur.count = stubs + Object.keys(entries).length
-    return cur
-  })
+// Every count-changing write is "edit the entries map, then re-derive count".
+// The math lives in lib/qty.js so it can be tested without Firebase.
+async function withEntries(key, mutate) {
+  await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => applyEntries(cur, mutate))
 }
 
-async function removeLastTaco(key) {
-  await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => {
-    if (!cur) return cur
-    const oldEntries = cur.entries || {}
-    const ids = Object.keys(oldEntries)
-    const stubs = Math.max(0, (cur.count || 0) - ids.length)
-    if (ids.length === 0) {
-      cur.count = Math.max(0, (cur.count || 0) - 1)
-      return cur
-    }
-    let latestId = ids[0]
-    for (const id of ids) if ((oldEntries[id].ts || 0) > (oldEntries[latestId].ts || 0)) latestId = id
-    const entries = { ...oldEntries }
-    delete entries[latestId]
-    cur.entries = entries
-    cur.count = stubs + Object.keys(entries).length
-    return cur
-  })
+async function logTacoWithId(key, id, entry) {
+  await withEntries(key, (entries) => ({ ...entries, [id]: entry }))
 }
 
 async function deleteTaco(key, entryId) {
-  await runTransaction(ref(db, `${ROOT}/${key}`), (cur) => {
-    if (!cur) return cur
-    const oldEntries = cur.entries || {}
-    const stubs = Math.max(0, (cur.count || 0) - Object.keys(oldEntries).length)
-    const entries = { ...oldEntries }
+  await withEntries(key, (entries) => {
     delete entries[entryId]
-    cur.entries = entries
-    cur.count = stubs + Object.keys(entries).length
-    return cur
+    return entries
   })
 }
 
+// Editing `qty` changes the player's total, so this can no longer be a plain
+// update() — it has to re-derive count like every other write.
 async function editTaco(key, entryId, patch) {
-  await update(ref(db, `${ROOT}/${key}/entries/${entryId}`), patch)
+  await withEntries(key, (entries) => mergeEntry(entries, entryId, patch))
+}
+
+async function removeLastTaco(key) {
+  await runTransaction(ref(db, `${ROOT}/${key}`), removeLastUpdater)
 }
 
 function compressImage(file, maxDim = 1600, quality = 0.8) {
@@ -447,29 +238,33 @@ async function uploadTacoPhoto(key, entryId, file) {
 // Star components
 // ---------------------------------------------------------------------------
 
-function Star({ filled, half, size = 28, color, bg }) {
+function Star({ filled, half, size = 28 }) {
   return (
-    <span style={{ position: 'relative', display: 'inline-block', width: size, height: size, lineHeight: `${size}px`, fontSize: size }}>
-      <span style={{ position: 'absolute', inset: 0, color: bg }}>★</span>
+    <span className="star" style={{ position: 'relative', width: size, height: size, lineHeight: `${size}px`, fontSize: size }}>
+      <span className="star__bg" style={{ position: 'absolute', inset: 0 }}>
+        ★
+      </span>
       {(filled || half) && (
-        <span style={{ position: 'absolute', inset: 0, color, clipPath: half ? 'inset(0 50% 0 0)' : 'inset(0 0 0 0)' }}>★</span>
+        <span className="star__fill" style={{ position: 'absolute', inset: 0, clipPath: half ? 'inset(0 50% 0 0)' : 'inset(0 0 0 0)' }}>
+          ★
+        </span>
       )}
     </span>
   )
 }
 
-function StarRow({ rating, size = 16, color, bg }) {
+function StarRow({ rating, size = 16 }) {
   const r = rating || 0
   const stars = []
   for (let i = 1; i <= 5; i++) {
     const filled = r >= i
     const half = !filled && r >= i - 0.5
-    stars.push(<Star key={i} filled={filled} half={half} size={size} color={color} bg={bg} />)
+    stars.push(<Star key={i} filled={filled} half={half} size={size} />)
   }
-  return <span style={{ display: 'inline-flex' }}>{stars}</span>
+  return <span className="star">{stars}</span>
 }
 
-function StarRating({ value, onChange, size = 32, color, bg }) {
+function StarRating({ value, onChange, size = 32 }) {
   function tap(n) {
     if (value === n) onChange(n - 0.5)
     else onChange(n)
@@ -480,8 +275,14 @@ function StarRating({ value, onChange, size = 32, color, bg }) {
         const filled = value >= n
         const half = !filled && value >= n - 0.5
         return (
-          <button key={n} type="button" onClick={() => tap(n)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} aria-label={`Rate ${n} stars`}>
-            <Star filled={filled} half={half} size={size} color={color} bg={bg} />
+          <button
+            key={n}
+            type="button"
+            onClick={() => tap(n)}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            aria-label={`Rate ${n} stars`}
+          >
+            <Star filled={filled} half={half} size={size} />
           </button>
         )
       })}
@@ -542,7 +343,7 @@ function useDebouncedNominatim(query, viewbox) {
   return { results, loading }
 }
 
-function LocationInput({ value, onChange, priorLabels, near, S }) {
+function LocationInput({ value, onChange, priorLabels, near, onNearMe }) {
   const [query, setQuery] = useState(value?.label || '')
   const [open, setOpen] = useState(false)
   const { results, loading } = useDebouncedNominatim(query, near)
@@ -573,7 +374,7 @@ function LocationInput({ value, onChange, priorLabels, near, S }) {
   return (
     <div style={{ position: 'relative' }}>
       <input
-        style={S.input}
+        className="input"
         placeholder="Where'd you get it?"
         value={query}
         onChange={(e) => {
@@ -585,24 +386,29 @@ function LocationInput({ value, onChange, priorLabels, near, S }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
-      <button type="button" style={S.chipBtn} onMouseDown={(e) => e.preventDefault()} onClick={homemade}>
-        🏠 Homemade
-      </button>
       {open && (priorMatches.length > 0 || results.length > 0 || loading) && (
-        <div style={S.autocompleteBox}>
+        <div className="autocomplete">
           {priorMatches.map((l) => (
-            <div key={l} style={S.autocompleteRow} onMouseDown={() => selectPrior(l)}>
+            <div key={l} className="autocomplete__row" onMouseDown={() => selectPrior(l)}>
               🕑 {l}
             </div>
           ))}
           {results.map((r) => (
-            <div key={r.place_id} style={S.autocompleteRow} onMouseDown={() => selectResult(r)}>
+            <div key={r.place_id} className="autocomplete__row" onMouseDown={() => selectResult(r)}>
               🍽️ {formatResultLabel(r)}
             </div>
           ))}
-          {loading && results.length === 0 && <div style={{ ...S.autocompleteRow, color: S.subt.color, cursor: 'default' }}>🔎 Finding spots near you…</div>}
+          {loading && results.length === 0 && <div className="autocomplete__row autocomplete__row--muted">🔎 Finding spots near you…</div>}
         </div>
       )}
+      <div className="row row--wrap" style={{ marginTop: 8, gap: 8 }}>
+        <button type="button" className="chip-btn" onMouseDown={(e) => e.preventDefault()} onClick={homemade}>
+          🏠 Homemade
+        </button>
+        <button type="button" className="chip-btn" onClick={onNearMe}>
+          📍 Near me
+        </button>
+      </div>
     </div>
   )
 }
@@ -612,7 +418,7 @@ function LocationInput({ value, onChange, priorLabels, near, S }) {
 // read-only in the Matrix tab.
 // ---------------------------------------------------------------------------
 
-function MatrixPlot({ value, onChange, points, th, S, size = 260 }) {
+function MatrixPlot({ value, onChange, points, size = 260 }) {
   const containerRef = useRef(null)
 
   function coordsFromEvent(e) {
@@ -635,44 +441,31 @@ function MatrixPlot({ value, onChange, points, th, S, size = 260 }) {
     <div
       ref={containerRef}
       onMouseDown={onChange ? handleDrag : undefined}
-      onMouseMove={onChange ? (e) => e.buttons === 1 && handleDrag(e) : undefined}
-      onTouchStart={onChange ? handleDrag : undefined}
       onTouchMove={onChange ? handleDrag : undefined}
-      style={{ ...S.matrixBox, height: size }}
+      className="matrix"
+      style={{ height: size }}
     >
-      <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: `1px dashed ${th.line}` }} />
-      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', borderLeft: `1px dashed ${th.line}` }} />
-      <div style={S.matrixAxisLabelTop}>chic ↑</div>
-      <div style={S.matrixAxisLabelBottom}>↓ cheap</div>
-      <div style={S.matrixAxisLabelLeft}>garbage ←</div>
-      <div style={S.matrixAxisLabelRight}>→ gourmet ⭐</div>
+      <div className="matrix__axis-h" />
+      <div className="matrix__axis-v" />
+      <div className="matrix__label matrix__label--top">chic ↑</div>
+      <div className="matrix__label matrix__label--bottom">↓ cheap</div>
+      <div className="matrix__label matrix__label--left">garbage ←</div>
+      <div className="matrix__label matrix__label--right">→ gourmet ⭐</div>
       {points &&
         points.map((p, i) => (
           <span
             key={i}
             onClick={p.onClick}
-            style={{
-              position: 'absolute',
-              left: `${((p.x + 1) / 2) * 100}%`,
-              top: `${((1 - p.y) / 2) * 100}%`,
-              transform: 'translate(-50%, -50%)',
-              fontSize: p.big ? 26 : 18,
-              filter: `drop-shadow(0 0 4px hsl(${p.hue}, 70%, 45%))`,
-              cursor: p.onClick ? 'pointer' : 'default',
-            }}
+            className={`matrix__pt${p.big ? ' matrix__pt--big' : ''}${p.onClick ? ' matrix__pt--clickable' : ''}`}
+            style={{ '--matrix-x': pct(((p.x + 1) / 2) * 100), '--matrix-y': pct(((1 - p.y) / 2) * 100), '--pin-hue': String(p.hue) }}
           >
             🌮
           </span>
         ))}
       {value && (
         <span
-          style={{
-            position: 'absolute',
-            left: `${((value.x + 1) / 2) * 100}%`,
-            top: `${((1 - value.y) / 2) * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            fontSize: 30,
-          }}
+          className="matrix__cursor"
+          style={{ '--matrix-x': pct(((value.x + 1) / 2) * 100), '--matrix-y': pct(((1 - value.y) / 2) * 100) }}
         >
           🌮
         </span>
@@ -685,8 +478,9 @@ function MatrixPlot({ value, onChange, points, th, S, size = 260 }) {
 // Log a Taco modal (create + edit)
 // ---------------------------------------------------------------------------
 
-function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S, th }) {
+function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels }) {
   const [rating, setRating] = useState(initial?.rating ?? null)
+  const [qty, setQty] = useState(() => entryQty(initial))
   const [locationVal, setLocationVal] = useState(initial?.location ?? null)
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [matrixOn, setMatrixOn] = useState(!!initial?.matrix)
@@ -735,6 +529,7 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
       await onSubmit(
         {
           rating,
+          qty,
           location: locationVal,
           notes: sanitizeNotes(notes),
           matrix: matrixOn ? matrixVal : null,
@@ -749,82 +544,112 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
   }
 
   return (
-    <div style={S.modalOverlay} onMouseDown={onCancel}>
-      <div style={S.modalCard} onMouseDown={(e) => e.stopPropagation()}>
-        <div style={S.sheetHandle} />
-        <div style={S.modalTitle}>{mode === 'edit' ? 'Edit taco ✏️' : 'Log a Taco 🌮'}</div>
+    <div className="modal-overlay" onMouseDown={onCancel}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal__handle" />
+        <h2 className="modal__title">{mode === 'edit' ? 'Edit taco' : 'Log a taco'}</h2>
+        <div className="t-sub">{mode === 'edit' ? 'Change anything you got wrong.' : 'Tally what you just ate.'}</div>
 
-        <div style={S.fieldLabel}>Rating</div>
-        <div>
-          <StarRating value={rating ?? 0} onChange={setRating} size={30} color={th.salsa} bg={th.line} />
+        <span className="field-label" id="qty-label">
+          How many?
+        </span>
+        <div className="qty">
+          <button
+            type="button"
+            className="btn qty__btn"
+            onClick={() => setQty((q) => clamp(q - 1, QTY_MIN, QTY_MAX))}
+            disabled={qty <= QTY_MIN}
+            aria-label="One fewer taco"
+          >
+            −
+          </button>
+          <span className="qty__value" aria-live="polite" aria-labelledby="qty-label">
+            {qty}
+          </span>
+          <button
+            type="button"
+            className="btn qty__btn"
+            onClick={() => setQty((q) => clamp(q + 1, QTY_MIN, QTY_MAX))}
+            disabled={qty >= QTY_MAX}
+            aria-label="One more taco"
+          >
+            +
+          </button>
+          <span className="qty__unit">taco{qty === 1 ? '' : 's'} in this sitting</span>
+        </div>
+
+        <span className="field-label">Rating</span>
+        <div className="row">
+          <StarRating value={rating ?? 0} onChange={setRating} size={30} />
           {rating != null && (
-            <button type="button" style={{ ...S.linkBtn, marginLeft: 8 }} onClick={() => setRating(null)}>
+            <button type="button" className="btn-link" onClick={() => setRating(null)}>
               clear
             </button>
           )}
         </div>
 
-        <div style={S.fieldLabel}>Location</div>
-        <LocationInput value={locationVal} onChange={setLocationVal} priorLabels={priorLabels} near={near} S={S} />
-        <button type="button" style={S.chipBtn} onClick={handleNearMe}>
-          📍 Near me
-        </button>
+        <span className="field-label">Location</span>
+        <LocationInput value={locationVal} onChange={setLocationVal} priorLabels={priorLabels} near={near} onNearMe={handleNearMe} />
 
-        <div style={S.fieldLabel}>Photo</div>
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} style={S.hiddenFile} tabIndex={-1} />
-        <input ref={libraryRef} type="file" accept="image/*" onChange={handlePhotoChange} style={S.hiddenFile} tabIndex={-1} />
+        <span className="field-label">Photo</span>
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden-file" tabIndex={-1} />
+        <input ref={libraryRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden-file" tabIndex={-1} />
         {!photoPreview ? (
-          <div style={S.photoBtnRow}>
-            <button type="button" style={S.photoBtn} onClick={() => cameraRef.current?.click()}>
+          <div className="photo-row">
+            <button type="button" className="photo-btn" onClick={() => cameraRef.current?.click()}>
               📷 Take photo
             </button>
-            <button type="button" style={S.photoBtn} onClick={() => libraryRef.current?.click()}>
+            <button type="button" className="photo-btn" onClick={() => libraryRef.current?.click()}>
               🖼️ Choose photo
             </button>
           </div>
         ) : (
-          <div style={S.photoFrame}>
-            <img src={photoPreview} style={S.photoImg} alt="" />
-            <button type="button" style={S.photoRemove} onClick={removePhoto} aria-label="Remove photo">
+          <div className="photo-frame">
+            <img src={photoPreview} className="photo-frame__img" alt="" />
+            <button type="button" className="photo-frame__remove" onClick={removePhoto} aria-label="Remove photo">
               ✕
             </button>
           </div>
         )}
 
-        <div style={S.fieldLabel}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-            <input type="checkbox" checked={matrixOn} onChange={(e) => setMatrixOn(e.target.checked)} /> Plot it on the matrix
-          </label>
-        </div>
-        {matrixOn && <MatrixPlot value={matrixVal} onChange={setMatrixVal} th={th} S={S} size={240} />}
+        <label className="row" style={{ cursor: 'pointer', gap: 8, marginTop: 20, fontWeight: 600 }}>
+          <input type="checkbox" checked={matrixOn} onChange={(e) => setMatrixOn(e.target.checked)} /> Plot it on the taste matrix
+        </label>
+        {matrixOn && <div style={{ marginTop: 10 }}>{<MatrixPlot value={matrixVal} onChange={setMatrixVal} size={240} />}</div>}
 
-        <div style={S.fieldLabel}>
+        <span className="field-label">
           Notes ({notes.length}/{NOTES_MAX})
-        </div>
-        <textarea style={S.textarea} value={notes} maxLength={NOTES_MAX} onChange={(e) => setNotes(e.target.value)} placeholder="al pastor, no cilantro..." />
+        </span>
+        <textarea
+          className="textarea"
+          value={notes}
+          maxLength={NOTES_MAX}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="al pastor, no cilantro…"
+        />
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <button style={{ ...S.primaryBtn, flex: 2, minHeight: 50, fontSize: 15 }} onClick={submit} disabled={saving}>
-            {saving ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Log it 🔥'}
+        <div className="modal__actions">
+          <button className="btn btn--primary btn--lg" onClick={submit} disabled={saving}>
+            {saving ? 'Saving…' : mode === 'edit' ? 'Save changes' : `Log ${qty} 🔥`}
           </button>
-          <button style={{ ...S.ghostBtn, flex: 1, minHeight: 50 }} onClick={onCancel}>
+          <button className="btn btn--ghost btn--lg" onClick={onCancel}>
             Cancel
           </button>
         </div>
 
         {mode === 'edit' && onDelete && (
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 14 }}>
             {!confirmDelete ? (
-              <button style={S.linkBtnDanger} onClick={() => setConfirmDelete(true)}>
+              <button className="btn-link btn-link--danger" onClick={() => setConfirmDelete(true)}>
                 Delete this taco
               </button>
             ) : (
-              <span>
+              <span className="t-sub">
                 Are you sure?{' '}
-                <button style={S.linkBtnDanger} onClick={onDelete}>
+                <button className="btn-link btn-link--danger" onClick={onDelete}>
                   Yes, delete
                 </button>{' '}
-                <button style={S.linkBtn} onClick={() => setConfirmDelete(false)}>
+                <button className="btn-link" onClick={() => setConfirmDelete(false)}>
                   Cancel
                 </button>
               </span>
@@ -840,45 +665,49 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels, S,
 // Admin panel
 // ---------------------------------------------------------------------------
 
-function AdminModal({ total, onReset, onNuke, onClose, S }) {
+function AdminModal({ total, onReset, onNuke, onClose }) {
   const [pw, setPw] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmNuke, setConfirmNuke] = useState(false)
 
   return (
-    <div style={S.modalOverlay} onMouseDown={onClose}>
-      <div style={S.modalCard} onMouseDown={(e) => e.stopPropagation()}>
-        <div style={S.modalTitle}>🔧 Admin</div>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal__handle" />
+        <h2 className="modal__title">🔧 Admin</h2>
         {!unlocked ? (
           <>
             <input
-              style={S.input}
+              className="input"
+              style={{ marginTop: 12 }}
               type="password"
               value={pw}
               onChange={(e) => setPw(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && pw === ADMIN_PW && setUnlocked(true)}
               placeholder="Password"
             />
-            <button style={{ ...S.primaryBtn, marginTop: 12 }} onClick={() => pw === ADMIN_PW && setUnlocked(true)}>
+            <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={() => pw === ADMIN_PW && setUnlocked(true)}>
               Unlock
             </button>
           </>
         ) : (
           <>
-            <div style={S.subt}>Running total: {total} 🌮</div>
+            <div className="t-sub" style={{ marginTop: 10 }}>
+              {total} tacos logged across all players.
+            </div>
             <div style={{ marginTop: 16 }}>
               {!confirmReset ? (
-                <button style={S.ghostBtn} onClick={() => setConfirmReset(true)}>
-                  Reset all counts to 0
+                <button className="btn btn--ghost" onClick={() => setConfirmReset(true)}>
+                  Reset all counts to zero
                 </button>
               ) : (
-                <span>
+                <span className="t-sub">
                   Sure?{' '}
-                  <button style={S.linkBtnDanger} onClick={onReset}>
+                  <button className="btn-link btn-link--danger" onClick={onReset}>
                     Yes, reset
                   </button>{' '}
-                  <button style={S.linkBtn} onClick={() => setConfirmReset(false)}>
+                  <button className="btn-link" onClick={() => setConfirmReset(false)}>
                     Cancel
                   </button>
                 </span>
@@ -886,16 +715,16 @@ function AdminModal({ total, onReset, onNuke, onClose, S }) {
             </div>
             <div style={{ marginTop: 12 }}>
               {!confirmNuke ? (
-                <button style={S.ghostBtn} onClick={() => setConfirmNuke(true)}>
+                <button className="btn btn--ghost" onClick={() => setConfirmNuke(true)}>
                   Remove all players &amp; counts
                 </button>
               ) : (
-                <span>
+                <span className="t-sub">
                   Sure?{' '}
-                  <button style={S.linkBtnDanger} onClick={onNuke}>
+                  <button className="btn-link btn-link--danger" onClick={onNuke}>
                     Yes, nuke everything
                   </button>{' '}
-                  <button style={S.linkBtn} onClick={() => setConfirmNuke(false)}>
+                  <button className="btn-link" onClick={() => setConfirmNuke(false)}>
                     Cancel
                   </button>
                 </span>
@@ -903,8 +732,8 @@ function AdminModal({ total, onReset, onNuke, onClose, S }) {
             </div>
           </>
         )}
-        <div style={{ marginTop: 16 }}>
-          <button style={S.ghostBtn} onClick={onClose}>
+        <div style={{ marginTop: 18 }}>
+          <button className="btn btn--ghost btn--block" onClick={onClose}>
             Close
           </button>
         </div>
@@ -917,36 +746,43 @@ function AdminModal({ total, onReset, onNuke, onClose, S }) {
 // Header
 // ---------------------------------------------------------------------------
 
-function Header({ theme, setTheme, locked, msLeft, onAdminOpen, onInfoOpen, S }) {
+function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOpen }) {
   const { d, h, m, s } = splitTime(msLeft)
   return (
-    <div style={S.header}>
-      <div style={S.headerRow}>
-        <div style={S.wordmark}>🌮 TACO FALL</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={S.iconBtn} onClick={onInfoOpen} aria-label="Rules & info">
+    <header className="header">
+      <div className="header__inner">
+        <div className="wordmark">
+          <span className="wordmark__mark">🌮</span> Taco Fall
+        </div>
+        <div className="header__actions">
+          <button className="btn btn--icon" onClick={onInfoOpen} aria-label="Rules &amp; info">
             ℹ️
           </button>
-          <button style={S.iconBtn} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-            {theme === 'dark' ? '☀️' : '🌙'}
+          <button className="btn btn--icon" onClick={onCycleTheme} aria-label={THEME_LABEL[themePref]} title={THEME_LABEL[themePref]}>
+            {THEME_ICON[themePref]}
           </button>
-          <button style={S.iconBtn} onClick={onAdminOpen}>
+          <button className="btn btn--icon" onClick={onAdminOpen} aria-label="Admin">
             🔧
           </button>
         </div>
       </div>
       {!locked ? (
-        <div style={S.countdownBar}>
-          🔥 Counting locks in {d}d {h}h {m}m {s}s
+        <div className="countdown">
+          <span>🔥 Locks in</span>
+          <span className="countdown__unit">{d}d</span>
+          <span className="countdown__unit">
+            {h}:{m}:{s}
+          </span>
         </div>
       ) : (
-        <div style={S.lockBanner}>🔒 Counting closed — final tally</div>
+        <div className="lock-banner">🔒 Counting closed — final tally</div>
       )}
-    </div>
+      <PapelPicado />
+    </header>
   )
 }
 
-function BottomNav({ tab, setTab, S }) {
+function BottomNav({ tab, setTab }) {
   const items = [
     ['count', '🌮', 'Count'],
     ['feed', '📱', 'Feed'],
@@ -954,12 +790,12 @@ function BottomNav({ tab, setTab, S }) {
     ['explore', '🗺️', 'Explore'],
   ]
   return (
-    <nav style={S.bottomNav}>
+    <nav className="nav">
       {items.map(([id, icon, label]) => {
         const active = tab === id
         return (
-          <button key={id} style={S.navItem(active)} onClick={() => setTab(id)} aria-current={active ? 'page' : undefined}>
-            <span style={S.navIcon(active)}>{icon}</span>
+          <button key={id} className="nav__item" data-active={active || undefined} onClick={() => setTab(id)} aria-current={active ? 'page' : undefined}>
+            <span className="nav__icon">{icon}</span>
             <span>{label}</span>
           </button>
         )
@@ -972,16 +808,20 @@ function BottomNav({ tab, setTab, S }) {
 // Sign-in screen
 // ---------------------------------------------------------------------------
 
-function SignInScreen({ onSignIn, signingIn, error, S }) {
+function SignInScreen({ onSignIn, signingIn, error }) {
   return (
-    <div style={S.joinCard}>
-      <div style={{ ...S.logo, fontSize: 30 }}>🌮 Taco Fall</div>
-      <p style={{ ...S.subt, marginTop: 12 }}>A summer-long taco tally for the crew — sign in with Google to join.</p>
-      <button style={S.googleBtn} onClick={onSignIn} disabled={signingIn}>
-        <span style={S.googleG}>G</span>
+    <div className="sign-in">
+      <PapelPicado variant="divider" />
+      <div style={{ fontSize: 46 }}>🌮</div>
+      <h1 className="sign-in__logo">Taco Fall</h1>
+      <p className="t-sub" style={{ marginTop: 12 }}>
+        A taco tally for the crew — sign in with Google to join.
+      </p>
+      <button className="google-btn" onClick={onSignIn} disabled={signingIn}>
+        <span className="google-btn__g">G</span>
         {signingIn ? 'Signing in…' : 'Sign in with Google'}
       </button>
-      {error && <div style={S.signInError}>{error}</div>}
+      {error && <div className="error-text">{error}</div>}
     </div>
   )
 }
@@ -990,50 +830,79 @@ function SignInScreen({ onSignIn, signingIn, error, S }) {
 // Tabs
 // ---------------------------------------------------------------------------
 
-function CountTab({ me, myKey, myPlayer, photoURL, locked, onPlus, onMinus, onSignOut, S }) {
+function CountTab({ me, myKey, myPlayer, photoURL, locked, rank, playerCount, crewTotal, onPlus, onMinus, onSignOut }) {
   const count = myPlayer?.count || 0
   const myEntries = myPlayer ? flattenEntries({ [myKey]: myPlayer }) : []
   const badges = earnedBadges({ count, entries: myEntries })
   const earnedIds = new Set(badges.map((b) => b.id))
   const nextBadge = BADGES.find((b) => !earnedIds.has(b.id))
+  const lastTaco = myEntries.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0]
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={S.accountRow}>
-        <Avatar name={me} photoURL={photoURL} size={26} S={S} />
-        <span style={S.subt}>
-          <strong>{me}</strong>
-        </span>
-        <button style={{ ...S.linkBtn, marginLeft: 4 }} onClick={onSignOut}>
-          Sign out
-        </button>
-      </div>
-      <div style={S.bigCount}>{count}</div>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <button style={S.countBtn} onClick={onMinus} disabled={locked || count === 0}>
-          −1
-        </button>
-        <button style={{ ...S.countBtn, ...S.countBtnPrimary }} onClick={onPlus} disabled={locked}>
-          +1 🌮
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 20 }}>
-        {badges.map((b) => (
-          <span key={b.id} style={S.badgeChip} title={b.hint}>
-            {b.emoji} {b.label}
+    <div className="stack">
+      <section className="card counter">
+        <div className="account-row">
+          <Avatar name={me} photoURL={photoURL} size={26} />
+          <span className="t-sub">
+            <strong>{me}</strong>
           </span>
-        ))}
-      </div>
-      {nextBadge && (
-        <div style={{ ...S.subt, marginTop: 10 }}>
-          Next: {nextBadge.emoji} {nextBadge.label} — {nextBadge.hint}
+          <button className="btn-link" onClick={onSignOut}>
+            Sign out
+          </button>
         </div>
-      )}
+
+        <div className="counter__value">{count}</div>
+        <div className="counter__caption">taco{count === 1 ? '' : 's'} this season</div>
+
+        <div className="counter__actions">
+          <button className="btn qty__btn" onClick={onMinus} disabled={locked || count === 0} aria-label="Remove one taco">
+            −
+          </button>
+          <button className="btn btn--primary btn--lg" onClick={onPlus} disabled={locked}>
+            Log a taco 🌮
+          </button>
+        </div>
+
+        <div className="stat-row">
+          <div className="stat">
+            <span className="stat__value">#{rank}</span>
+            <span className="stat__label">of {playerCount}</span>
+          </div>
+          <div className="stat">
+            <span className="stat__value">{lastTaco ? formatRelative(lastTaco.ts).replace(' ago', '') : '—'}</span>
+            <span className="stat__label">since last</span>
+          </div>
+          <div className="stat">
+            <span className="stat__value">{crewTotal}</span>
+            <span className="stat__label">crew total</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3 className="card__title">Your badges</h3>
+        {badges.length > 0 ? (
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            {badges.map((b) => (
+              <span key={b.id} className="badge-chip" title={b.hint}>
+                {b.emoji} {b.label}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="t-sub">None yet — log your first taco to get started.</div>
+        )}
+        {nextBadge && (
+          <div className="t-sub" style={{ marginTop: 12 }}>
+            Next up: {nextBadge.emoji} <strong>{nextBadge.label}</strong> — {nextBadge.hint}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
 
-function BoardTab({ players, myKey, locked, S, th }) {
+function BoardTab({ players, myKey, locked }) {
   const list = Object.entries(players)
     .map(([key, p]) => ({ key, name: p.name, count: p.count || 0, entries: flattenEntries({ [key]: p }) }))
     .sort((a, b) => b.count - a.count)
@@ -1043,44 +912,60 @@ function BoardTab({ players, myKey, locked, S, th }) {
   const maxCount = list[0]?.count || 1
 
   return (
-    <div>
-      <div style={{ ...S.banner, background: locked ? th.salsa : th.cardSoft, color: locked ? '#fff' : th.text }}>
-        {locked
-          ? `👑 Counting closed — ${winner ? winner.name : 'nobody'} wins with ${winner ? winner.count : 0} 🌮`
-          : `🌮 Tacos eaten so far · ${total} · by ${list.length} player${list.length === 1 ? '' : 's'} · live count`}
+    <div className="ranks-split">
+      <div>
+        <div className="banner" data-locked={locked || undefined}>
+          {locked ? (
+            <>👑 {winner ? winner.name : 'Nobody'} wins with {winner ? winner.count : 0} 🌮</>
+          ) : (
+            <>
+              <span className="banner__stat">{total}</span> tacos eaten by {list.length} player{list.length === 1 ? '' : 's'}
+            </>
+          )}
+        </div>
+
+        {top3.length > 0 && (
+          <>
+            <PapelPicado variant="divider" />
+            <div className="podium">
+              {[top3[1], top3[0], top3[2]].filter(Boolean).map((p) => {
+                const rank = p === top3[0] ? 1 : p === top3[1] ? 2 : 3
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'
+                return (
+                  <div key={p.key} className="podium__col" data-rank={rank}>
+                    <div className="podium__person">
+                      <span className="podium__figure">
+                        <Avatar name={p.name} size={rank === 1 ? 46 : 38} />
+                        <span className="podium__medal">{medal}</span>
+                      </span>
+                      <span className="podium__name" title={p.name}>
+                        {p.name}
+                      </span>
+                      <span className="podium__count">{p.count} 🌮</span>
+                    </div>
+                    <div className="podium__pedestal">{rank}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {top3.length > 0 && (
-        <div style={S.podiumRow}>
-          {[top3[1], top3[0], top3[2]].filter(Boolean).map((p) => {
-            const rank = p === top3[0] ? 1 : p === top3[1] ? 2 : 3
-            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'
-            return (
-              <div key={p.key} style={{ ...S.podiumCol, height: rank === 1 ? 140 : rank === 2 ? 110 : 90 }}>
-                <div style={{ fontSize: 24 }}>{medal}</div>
-                <div style={S.podiumName} title={p.name}>
-                  {p.name}
-                </div>
-                <div style={{ whiteSpace: 'nowrap' }}>{p.count} 🌮</div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+      <div className="stack" style={{ gap: 8 }}>
         {list.map((p, i) => (
-          <div key={p.key} style={{ ...S.listRow, borderColor: p.key === myKey ? th.tortilla : th.line }}>
-            <div style={S.rowHead}>
-              <span style={S.rowName} title={p.name}>
-                {i + 1}. {p.name}
+          <div key={p.key} className="rank-row" data-mine={p.key === myKey || undefined}>
+            <div className="rank-row__head">
+              <span className="rank-row__pos">{i + 1}</span>
+              <span className="rank-row__name" title={p.name}>
+                {p.name}
               </span>
-              <span style={S.rowCount}>{p.count} 🌮</span>
+              <span className="rank-row__count">{p.count} 🌮</span>
             </div>
-            <div style={{ height: 6, background: th.line, borderRadius: 3, marginTop: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${(p.count / maxCount) * 100}%`, height: '100%', background: th.salsa }} />
+            <div className="bar">
+              <div className="bar__fill" style={{ '--bar-pct': pct((p.count / maxCount) * 100) }} />
             </div>
-            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+            <div className="rank-row__badges">
               {earnedBadges({ count: p.count, entries: p.entries }).map((b) => (
                 <span key={b.id} title={b.label}>
                   {b.emoji}
@@ -1094,7 +979,7 @@ function BoardTab({ players, myKey, locked, S, th }) {
   )
 }
 
-function MapTab({ entries, S }) {
+function MapTab({ entries }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -1112,9 +997,11 @@ function MapTab({ entries, S }) {
     const bounds = []
     for (const e of pinned) {
       const hue = hashHue(e.playerName)
+      // Leaflet writes this HTML itself, outside React, so the class has to be
+      // global and the dynamic hue comes in as a custom property.
       const icon = L.divIcon({
-        className: '',
-        html: `<div style="width:36px;height:44px;position:relative;">
+        className: 'taco-pin',
+        html: `<div style="--pin-hue:${hue};width:36px;height:44px;position:relative;">
           <div style="position:absolute;inset:0;background:linear-gradient(135deg, hsl(${hue},65%,50%), hsl(${hue},65%,38%));border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,0.35);"></div>
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;">🌮</div>
         </div>`,
@@ -1136,19 +1023,19 @@ function MapTab({ entries, S }) {
   }, [entries])
 
   const pinnedCount = entries.filter((e) => e.location && e.location.lat != null).length
-  const homemadeCount = entries.filter((e) => isHomemade(e.location)).length
+  const homemadeCount = sumQty(entries.filter((e) => isHomemade(e.location)))
 
   return (
     <div>
-      <div style={S.sectionHeader}>
-        🗺️ Taco Map · {pinnedCount} spots pinned · {homemadeCount} homemade 🏠
-      </div>
-      <div ref={containerRef} style={{ height: 420, borderRadius: 16, overflow: 'hidden' }} />
+      <p className="section-label">
+        {pinnedCount} spots pinned · {homemadeCount} homemade 🏠
+      </p>
+      <div ref={containerRef} className="map" />
     </div>
   )
 }
 
-function MatrixTab({ entries, myKey, S, th }) {
+function MatrixTab({ entries, myKey }) {
   const [active, setActive] = useState(null)
   const points = entries
     .filter((e) => e.matrix)
@@ -1156,14 +1043,14 @@ function MatrixTab({ entries, myKey, S, th }) {
 
   return (
     <div>
-      <div style={S.sectionHeader}>📊 Taste Matrix</div>
+      <p className="section-label">Taste matrix · tap a taco for details</p>
       <div style={{ position: 'relative' }}>
-        <MatrixPlot points={points} th={th} S={S} size={340} />
+        <MatrixPlot points={points} size={340} />
         {active && (
-          <div style={S.matrixActiveCard}>
+          <div className="matrix__active">
             <strong>{active.playerName}</strong>
             <div>{renderStarsText(active.rating)}</div>
-            <div>{active.location?.label || '—'}</div>
+            <div className="t-tiny">{active.location?.label || '—'}</div>
           </div>
         )}
       </div>
@@ -1171,8 +1058,10 @@ function MatrixTab({ entries, myKey, S, th }) {
   )
 }
 
-function StarsTab({ entries, players, myKey, S, th }) {
+function StarsTab({ entries, players, myKey }) {
   const rated = entries.filter((e) => e.rating != null)
+  // Deliberately unweighted by qty: a rating is one act of judgement, so one
+  // person logging 20 tacos at 5★ must not outvote twenty separate opinions.
   const avg = rated.length ? rated.reduce((a, b) => a + b.rating, 0) / rated.length : 0
   const bands = [5, 4, 3, 2, 1].map((n) => ({ n, count: rated.filter((e) => Math.ceil(e.rating) === n).length }))
   const top5 = [...rated].sort((a, b) => b.rating - a.rating).slice(0, 5)
@@ -1192,61 +1081,74 @@ function StarsTab({ entries, players, myKey, S, th }) {
   const earnedIds = new Set(badges.map((b) => b.id))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={S.card}>
-        <div style={S.cardTitle}>Crew average</div>
-        <div style={S.bigNumber}>{avg.toFixed(1)}</div>
-        <StarRow rating={avg} size={22} color={th.salsa} bg={th.line} />
-        <div style={S.subt}>{rated.length} rated tacos</div>
-        <div style={{ marginTop: 12 }}>
+    <div className="stack">
+      <div className="card">
+        <h3 className="card__title">Crew average</h3>
+        <div className="row" style={{ gap: 12 }}>
+          <span className="t-num" style={{ fontSize: 40, color: 'var(--chili)' }}>
+            {avg.toFixed(1)}
+          </span>
+          <div>
+            <StarRow rating={avg} size={20} />
+            <div className="t-sub">
+              {rated.length} rating{rated.length === 1 ? '' : 's'}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 14 }}>
           {bands.map((b) => (
-            <div key={b.n} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div key={b.n} className="row" style={{ gap: 8, marginBottom: 6 }}>
               <span style={{ width: 28 }}>{b.n}★</span>
-              <div style={{ flex: 1, height: 8, background: th.line, borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${rated.length ? (b.count / rated.length) * 100 : 0}%`, height: '100%', background: th.salsa }} />
+              <div className="bar" style={{ flex: 1, marginTop: 0 }}>
+                <div className="bar__fill" style={{ '--bar-pct': pct(rated.length ? (b.count / rated.length) * 100 : 0) }} />
               </div>
-              <span style={{ width: 24, textAlign: 'right' }}>{b.count}</span>
+              <span className="t-sub" style={{ width: 24, textAlign: 'right' }}>
+                {b.count}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={S.card}>
-        <div style={S.cardTitle}>Top tacos</div>
-        {top5.length === 0 && <div style={S.subt}>No ratings yet.</div>}
+      <div className="card">
+        <h3 className="card__title">Top tacos</h3>
+        {top5.length === 0 && <div className="t-sub">No ratings yet.</div>}
         {top5.map((e) => (
-          <div key={e.id} style={{ ...S.diaryRow, borderColor: e.playerKey === myKey ? th.tortilla : th.line, marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <strong>{e.playerName}</strong>
-              <StarRow rating={e.rating} size={14} color={th.salsa} bg={th.line} />
+          <div key={e.id} className="diary-row" data-mine={e.playerKey === myKey || undefined}>
+            <div className="rank-row__head">
+              <strong>
+                {e.playerName}
+                {e.qty > 1 && <span className="t-sub" style={{ marginLeft: 6 }}>×{e.qty}</span>}
+              </strong>
+              <StarRow rating={e.rating} size={14} />
             </div>
-            <div style={S.subt}>
+            <div className="t-sub">
               {isHomemade(e.location) ? '🏠' : '📍'} {e.location?.label || '—'}
             </div>
-            {e.notes && <div style={{ fontStyle: 'italic' }}>{e.notes}</div>}
+            {e.notes && <div style={{ fontStyle: 'italic', marginTop: 4 }}>{e.notes}</div>}
           </div>
         ))}
       </div>
 
-      <div style={S.card}>
-        <div style={S.cardTitle}>Your badges</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
+      <div className="card">
+        <h3 className="card__title">Your badges</h3>
+        <div className="badge-grid">
           {BADGES.map((b) => (
-            <div key={b.id} style={{ ...S.badgeCell, opacity: earnedIds.has(b.id) ? 1 : 0.4, filter: earnedIds.has(b.id) ? 'none' : 'grayscale(1)' }} title={b.hint}>
-              <div style={{ fontSize: 26 }}>{b.emoji}</div>
-              <div style={{ fontSize: 11 }}>{b.label}</div>
+            <div key={b.id} className="badge-cell" data-locked={!earnedIds.has(b.id) || undefined} title={b.hint}>
+              <div className="badge-cell__emoji">{b.emoji}</div>
+              <div className="badge-cell__label">{b.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={S.card}>
-        <div style={S.cardTitle}>Pickiest critics</div>
-        {perPlayer.length === 0 && <div style={S.subt}>Not enough ratings yet.</div>}
+      <div className="card">
+        <h3 className="card__title">Pickiest critics</h3>
+        {perPlayer.length === 0 && <div className="t-sub">Not enough ratings yet.</div>}
         {perPlayer.map((p) => (
-          <div key={p.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${th.line}` }}>
+          <div key={p.key} className="critic-row">
             <span>{p.name}</span>
-            <span>
+            <span className="t-sub">
               {p.avg.toFixed(1)}★ ({p.count})
             </span>
           </div>
@@ -1256,82 +1158,103 @@ function StarsTab({ entries, players, myKey, S, th }) {
   )
 }
 
-function Avatar({ name, photoURL, size = 38, S }) {
+const AVATAR_COLORS = ['var(--chili)', 'var(--talavera)', 'var(--cactus)', 'var(--rosa)', 'var(--marigold-deep)']
+
+function Avatar({ name, photoURL, size = 38 }) {
+  const style = { '--avatar-size': `${size}px`, '--avatar-color': AVATAR_COLORS[hashHue(name) % AVATAR_COLORS.length] }
   if (photoURL) {
-    return <img src={photoURL} alt="" referrerPolicy="no-referrer" style={{ ...S.avatar(size), objectFit: 'cover', background: 'transparent' }} />
+    return <img src={photoURL} alt="" referrerPolicy="no-referrer" className="avatar" style={{ ...style, background: 'transparent' }} />
   }
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div style={{ ...S.avatar(size), background: `hsl(${hashHue(name)}, 58%, 48%)` }} aria-hidden="true">
+    <div className="avatar" style={style} aria-hidden="true">
       {initial}
     </div>
   )
 }
 
-function InstagramCard({ e, mine, onEdit, S, th }) {
+function PostHead({ e, mine, onEdit }) {
   return (
-    <div style={{ ...S.igCard, borderColor: mine ? th.tortilla : th.line }}>
-      <div style={S.igHeader}>
-        <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} S={S} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={S.feedName}>
-            {e.playerName}
-            {mine && <span style={{ ...S.feedSub, marginLeft: 6 }}>· you</span>}
+    <div className="post__head">
+      <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} />
+      <div className="post__ident">
+        <div className="post__name">
+          {e.playerName}
+          {mine && <span className="post__sub"> · you</span>}
+        </div>
+        {e.location && (
+          <div className="post__sub">
+            {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
           </div>
-          {e.location && (
-            <div style={S.feedSub}>
-              {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
-            </div>
-          )}
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={S.feedTime}>{formatRelative(e.ts)}</div>
-          {onEdit && (
-            <button style={S.feedEditBtn} onClick={() => onEdit(e)}>
-              ✏️ edit
-            </button>
-          )}
-        </div>
+        )}
       </div>
-      <img src={e.photoUrl} style={S.igPhoto} alt="" loading="lazy" />
-      <div style={S.igBody}>
-        {e.rating != null && (
-          <div style={S.igActionRow}>
-            <StarRow rating={e.rating} size={20} color={th.salsa} bg={th.line} />
-            <span style={S.feedSub}>{e.rating}★</span>
-          </div>
+      <div>
+        <div className="post__time">{formatRelative(e.ts)}</div>
+        {onEdit && (
+          <button className="post__edit" onClick={() => onEdit(e)}>
+            ✏️ edit
+          </button>
         )}
-        {e.notes && (
-          <div style={S.igCaption}>
-            <strong>{e.playerName}</strong> {e.notes}
-          </div>
-        )}
-        {e.matrix && <span style={{ ...S.matrixChip, marginTop: 8 }}>🎯 plotted</span>}
       </div>
     </div>
   )
 }
 
-function ThreadsPost({ e, mine, onEdit, S, th }) {
+function PhotoPost({ e, mine, onEdit }) {
+  return (
+    <article className="post" data-mine={mine || undefined}>
+      <PostHead e={e} mine={mine} onEdit={onEdit} />
+      <img src={e.photoUrl} className="post__photo" alt="" loading="lazy" />
+      <div className="post__body">
+        {e.rating != null && (
+          <div className="post__rating-row">
+            <StarRow rating={e.rating} size={19} />
+            <span className="post__sub">{e.rating}★</span>
+          </div>
+        )}
+        {e.notes && (
+          <div className="post__caption">
+            <strong>{e.playerName}</strong> {e.notes}
+          </div>
+        )}
+        {(e.qty > 1 || e.matrix) && (
+          <div className="post__chips">
+            {e.qty > 1 && <span className="chip chip--qty">×{e.qty} tacos</span>}
+            {e.matrix && <span className="chip">🎯 plotted</span>}
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function TextPost({ e, mine, onEdit }) {
   const hasText = e.notes && e.notes.trim().length > 0
   const untagged = e.rating == null && !e.location && !e.notes && !e.matrix
   return (
-    <div style={{ ...S.thPost, borderColor: mine ? th.tortilla : th.line, borderStyle: untagged ? 'dashed' : 'solid' }}>
-      <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} S={S} />
-      <div style={S.thBody}>
-        <div style={S.thHeadRow}>
-          <span style={S.feedName}>{e.playerName}</span>
-          {mine && <span style={S.feedSub}>· you</span>}
-          <span style={{ ...S.feedTime, marginLeft: 'auto' }}>{formatRelative(e.ts)}</span>
+    <article className="post post--text" data-mine={mine || undefined} data-untagged={untagged || undefined}>
+      <Avatar name={e.playerName} photoURL={e.playerPhoto} size={38} />
+      <div className="post__ident">
+        <div className="row" style={{ gap: 6 }}>
+          <span className="post__name">{e.playerName}</span>
+          {mine && <span className="post__sub">· you</span>}
+          <span className="post__time" style={{ marginLeft: 'auto' }}>
+            {formatRelative(e.ts)}
+          </span>
           {onEdit && (
-            <button style={{ ...S.feedEditBtn, marginTop: 0, marginLeft: 10 }} onClick={() => onEdit(e)}>
+            <button className="post__edit" onClick={() => onEdit(e)}>
               ✏️
             </button>
           )}
         </div>
-        {hasText ? <div style={S.thText}>{e.notes}</div> : <div style={{ ...S.thText, color: th.subt }}>logged a taco 🌮</div>}
-        <div style={S.thMetaRow}>
-          {e.rating != null ? <StarRow rating={e.rating} size={15} color={th.salsa} bg={th.line} /> : <span>— unrated</span>}
+        {hasText ? (
+          <div className="post__text">{e.notes}</div>
+        ) : (
+          <div className="post__text post__text--muted">logged {e.qty > 1 ? `${e.qty} tacos` : 'a taco'} 🌮</div>
+        )}
+        <div className="post__meta">
+          {e.qty > 1 && <span className="chip chip--qty">×{e.qty}</span>}
+          {e.rating != null ? <StarRow rating={e.rating} size={15} /> : <span>— unrated</span>}
           {e.location && (
             <span>
               {isHomemade(e.location) ? '🏠' : '📍'} {e.location.label}
@@ -1339,44 +1262,45 @@ function ThreadsPost({ e, mine, onEdit, S, th }) {
           )}
           {e.matrix && <span>🎯 plotted</span>}
         </div>
-        {onEdit && untagged && <div style={S.untaggedHint}>🔖 Untagged taco — tap ✏️ to add stars, place &amp; notes</div>}
+        {onEdit && untagged && <div className="untagged-hint">🔖 Untagged taco — tap ✏️ to add stars, place &amp; notes</div>}
       </div>
-    </div>
+    </article>
   )
 }
 
-function FeedTab({ entries, myKey, locked, onEdit, S, th }) {
+function FeedTab({ entries, myKey, locked, onEdit }) {
   const [scope, setScope] = useState('everyone')
   const sorted = useMemo(() => [...entries].sort((a, b) => (b.ts || 0) - (a.ts || 0)), [entries])
   const shown = scope === 'mine' ? sorted.filter((e) => e.playerKey === myKey) : sorted
+  const shownQty = sumQty(shown)
   const canEdit = scope === 'mine' && !locked && myKey ? onEdit : null
 
   return (
     <div>
-      <div style={S.segRow}>
-        <button style={S.segBtn(scope === 'everyone')} onClick={() => setScope('everyone')}>
+      <div className="seg">
+        <button className="seg__btn" data-active={scope === 'everyone' || undefined} onClick={() => setScope('everyone')}>
           Everyone
         </button>
-        <button style={S.segBtn(scope === 'mine')} onClick={() => setScope('mine')}>
+        <button className="seg__btn" data-active={scope === 'mine' || undefined} onClick={() => setScope('mine')}>
           Mine
         </button>
       </div>
       {shown.length === 0 ? (
-        <div style={S.card}>
+        <div className="card empty">
           {scope === 'mine' ? 'No tacos logged yet — hit the 🌮 Count tab to start your diary.' : 'No tacos yet — post the first one from the Count tab. 🌮'}
         </div>
       ) : (
         <>
-          <div style={S.feedHead}>
-            🌮 {shown.length} taco{shown.length === 1 ? '' : 's'} · freshest first
+          <div className="feed-head">
+            🌮 {shownQty} taco{shownQty === 1 ? '' : 's'} · {shown.length} post{shown.length === 1 ? '' : 's'} · freshest first
           </div>
-          <div style={S.feedWrap}>
+          <div className="feed-wrap">
             {shown.map((e) => {
               const mine = e.playerKey === myKey
               return e.photoUrl ? (
-                <InstagramCard key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} S={S} th={th} />
+                <PhotoPost key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} />
               ) : (
-                <ThreadsPost key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} S={S} th={th} />
+                <TextPost key={e.id} e={e} mine={mine} onEdit={mine ? canEdit : null} />
               )
             })}
           </div>
@@ -1386,39 +1310,39 @@ function FeedTab({ entries, myKey, locked, onEdit, S, th }) {
   )
 }
 
-function ExploreTab({ entries, myKey, S, th }) {
+function ExploreTab({ entries, myKey }) {
   const [view, setView] = useState('map')
   return (
     <div>
-      <div style={S.segRow}>
-        <button style={S.segBtn(view === 'map')} onClick={() => setView('map')}>
+      <div className="seg">
+        <button className="seg__btn" data-active={view === 'map' || undefined} onClick={() => setView('map')}>
           🗺️ Map
         </button>
-        <button style={S.segBtn(view === 'matrix')} onClick={() => setView('matrix')}>
+        <button className="seg__btn" data-active={view === 'matrix' || undefined} onClick={() => setView('matrix')}>
           📊 Matrix
         </button>
       </div>
-      {view === 'map' ? <MapTab entries={entries} S={S} /> : <MatrixTab entries={entries} myKey={myKey} S={S} th={th} />}
+      {view === 'map' ? <MapTab entries={entries} /> : <MatrixTab entries={entries} myKey={myKey} />}
     </div>
   )
 }
 
-function RanksTab({ players, entries, myKey, locked, S, th }) {
+function RanksTab({ players, entries, myKey, locked }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <BoardTab players={players} myKey={myKey} locked={locked} S={S} th={th} />
-      <StarsTab entries={entries} players={players} myKey={myKey} S={S} th={th} />
+    <div className="stack" style={{ gap: 24 }}>
+      <BoardTab players={players} myKey={myKey} locked={locked} />
+      <StarsTab entries={entries} players={players} myKey={myKey} />
     </div>
   )
 }
 
-function RulesModal({ onClose, S }) {
+function RulesModal({ onClose }) {
   return (
-    <div style={S.modalOverlay} onMouseDown={onClose}>
-      <div style={S.modalCard} onMouseDown={(e) => e.stopPropagation()}>
-        <div style={S.sheetHandle} />
-        <div style={S.modalTitle}>🌮 The Rules</div>
-        <ul style={{ lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal__handle" />
+        <h2 className="modal__title">🌮 The Rules</h2>
+        <ul style={{ lineHeight: 1.9, paddingLeft: 20, margin: '12px 0 0' }}>
           <li>You must be able to pick it up — no forks.</li>
           <li>Taco salads, taco bowls, and burritos do not count.</li>
           <li>2 street-size tacos = 1 taco.</li>
@@ -1427,8 +1351,8 @@ function RulesModal({ onClose, S }) {
           <li>Homemade tacos always count.</li>
           <li>Lettuce wrap instead of a tortilla is OK only if you're gluten-free.</li>
         </ul>
-        <div style={{ marginTop: 18 }}>
-          <button style={{ ...S.ghostBtn, width: '100%', minHeight: 48 }} onClick={onClose}>
+        <div style={{ marginTop: 20 }}>
+          <button className="btn btn--ghost btn--block btn--lg" onClick={onClose}>
             Close
           </button>
         </div>
@@ -1442,9 +1366,7 @@ function RulesModal({ onClose, S }) {
 // ---------------------------------------------------------------------------
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
-  const th = theme === 'dark' ? DT : LT
-  const S = useMemo(() => styles(th), [th])
+  const { pref: themePref, cycleTheme } = useTheme()
   const [user, setUser] = useState(undefined) // undefined = auth loading, null = signed out
   const [signingIn, setSigningIn] = useState(false)
   const [signInError, setSignInError] = useState('')
@@ -1456,10 +1378,20 @@ export default function App() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [rain, setRain] = useState([])
 
-  useEffect(() => onAuthStateChanged(auth, (u) => setUser(u)), [])
+  useEffect(() => {
+    if (DEMO) {
+      setUser(DEMO_USER)
+      return
+    }
+    return onAuthStateChanged(auth, (u) => setUser(u))
+  }, [])
 
   // Subscribe to the shared data only once signed in (keeps reads behind auth).
   useEffect(() => {
+    if (DEMO) {
+      setPlayers(demoPlayers())
+      return
+    }
     if (!user) {
       setPlayers({})
       return
@@ -1472,7 +1404,7 @@ export default function App() {
   // existing entries/count — a plain set() based on the local cache wiped
   // data when `players` was still empty on app reopen.
   useEffect(() => {
-    if (!user) return
+    if (!user || DEMO) return
     const name = sanitizeName(user.displayName) || 'Taco Fan'
     const photoURL = user.photoURL || null
     runTransaction(ref(db, `${ROOT}/${user.uid}`), (cur) => {
@@ -1488,10 +1420,6 @@ export default function App() {
     return () => clearInterval(id)
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem(THEME_KEY, theme)
-  }, [theme])
-
   const locked = now >= LOCK.getTime()
   const myKey = user ? user.uid : null
   const myPlayer = myKey ? players[myKey] : null
@@ -1503,6 +1431,11 @@ export default function App() {
     return Array.from(set)
   }, [allEntries])
   const total = Object.values(players).reduce((a, p) => a + (p.count || 0), 0)
+  const myRank = useMemo(() => {
+    const sorted = Object.entries(players).sort((a, b) => (b[1].count || 0) - (a[1].count || 0))
+    const i = sorted.findIndex(([key]) => key === myKey)
+    return i < 0 ? sorted.length + 1 : i + 1
+  }, [players, myKey])
 
   async function handleSignIn() {
     setSigningIn(true)
@@ -1538,13 +1471,27 @@ export default function App() {
     setTimeout(() => setRain([]), 4800)
   }
 
+  // In demo mode the same pure reducers run against local state instead of
+  // Firebase, so the fixtures exercise the real counting math.
+  function demoApply(updater) {
+    setPlayers((prev) => ({ ...prev, [myKey]: updater(structuredClone(prev[myKey])) }))
+  }
+
   async function handleMinus() {
     if (!myKey || locked) return
+    if (DEMO) return demoApply(removeLastUpdater)
     await removeLastTaco(myKey)
   }
 
   async function handleCreateSubmit(draft, photoFile) {
     if (!myKey) return
+    if (DEMO) {
+      const id = `demo-${Date.now()}`
+      demoApply((cur) => applyEntries(cur, (es) => ({ ...es, [id]: { ts: Date.now(), ...draft } })))
+      setModal(null)
+      triggerRain()
+      return
+    }
     const newId = push(ref(db, `${ROOT}/${myKey}/entries`)).key
     let photoUrl = null
     if (photoFile) {
@@ -1571,14 +1518,28 @@ export default function App() {
     } else if (clearPhoto) {
       photoUrl = null
     }
-    // photoUrl of null deletes the field via RTDB update, so a removed photo actually clears.
-    await editTaco(myKey, modal.entry.id, { ...draft, photoUrl })
+    // photoUrl of null deletes the field, so a removed photo actually clears.
+    // Only ever pass `draft` here — modal.entry carries flattenEntries' synthetic
+    // playerName/playerKey/id fields, which must never be written back to the DB.
+    const id = modal.entry.id
+    if (DEMO) demoApply((cur) => applyEntries(cur, (es) => mergeEntry(es, id, { ...draft, photoUrl })))
+    else await editTaco(myKey, id, { ...draft, photoUrl })
     setModal(null)
   }
 
   async function handleDeleteEntry() {
     if (!myKey || !modal?.entry) return
-    await deleteTaco(myKey, modal.entry.id)
+    const id = modal.entry.id
+    if (DEMO) {
+      demoApply((cur) =>
+        applyEntries(cur, (es) => {
+          delete es[id]
+          return es
+        }),
+      )
+    } else {
+      await deleteTaco(myKey, id)
+    }
     setModal(null)
   }
 
@@ -1597,7 +1558,7 @@ export default function App() {
   }
 
   return (
-    <div style={S.page}>
+    <div className="page">
       {rain.map((r) => (
         <span
           key={r.id}
@@ -1609,26 +1570,46 @@ export default function App() {
       ))}
 
       {user === undefined ? (
-        <div style={{ ...S.joinCard, marginTop: 120 }}>
-          <div style={{ ...S.logo, fontSize: 30 }}>🌮 Taco Fall</div>
-          <div style={{ ...S.subt, marginTop: 12 }}>Loading…</div>
+        <div className="sign-in">
+          <div style={{ fontSize: 46 }}>🌮</div>
+          <h1 className="sign-in__logo">Taco Fall</h1>
+          <div className="t-sub" style={{ marginTop: 12 }}>
+            Loading…
+          </div>
         </div>
       ) : !user ? (
-        <SignInScreen onSignIn={handleSignIn} signingIn={signingIn} error={signInError} S={S} />
+        <SignInScreen onSignIn={handleSignIn} signingIn={signingIn} error={signInError} />
       ) : (
         <>
-          <Header theme={theme} setTheme={setTheme} locked={locked} msLeft={LOCK.getTime() - now} onAdminOpen={() => setAdminOpen(true)} onInfoOpen={() => setInfoOpen(true)} S={S} />
-          <div style={S.content}>
+          <Header
+            themePref={themePref}
+            onCycleTheme={cycleTheme}
+            locked={locked}
+            msLeft={LOCK.getTime() - now}
+            onAdminOpen={() => setAdminOpen(true)}
+            onInfoOpen={() => setInfoOpen(true)}
+          />
+          <main className="content">
             {tab === 'count' && (
-              <CountTab me={myName} myKey={myKey} myPlayer={myPlayer} photoURL={user.photoURL} locked={locked} onPlus={() => !locked && setModal({ mode: 'create' })} onMinus={handleMinus} onSignOut={handleSignOut} S={S} />
+              <CountTab
+                me={myName}
+                myKey={myKey}
+                myPlayer={myPlayer}
+                photoURL={user.photoURL}
+                locked={locked}
+                rank={myRank}
+                playerCount={Object.keys(players).length}
+                crewTotal={total}
+                onPlus={() => !locked && setModal({ mode: 'create' })}
+                onMinus={handleMinus}
+                onSignOut={handleSignOut}
+              />
             )}
-            {tab === 'feed' && (
-              <FeedTab entries={allEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} S={S} th={th} />
-            )}
-            {tab === 'ranks' && <RanksTab players={players} entries={allEntries} myKey={myKey} locked={locked} S={S} th={th} />}
-            {tab === 'explore' && <ExploreTab entries={allEntries} myKey={myKey} S={S} th={th} />}
-          </div>
-          <BottomNav tab={tab} setTab={setTab} S={S} />
+            {tab === 'feed' && <FeedTab entries={allEntries} myKey={myKey} locked={locked} onEdit={(entry) => setModal({ mode: 'edit', entry })} />}
+            {tab === 'ranks' && <RanksTab players={players} entries={allEntries} myKey={myKey} locked={locked} />}
+            {tab === 'explore' && <ExploreTab entries={allEntries} myKey={myKey} />}
+          </main>
+          <BottomNav tab={tab} setTab={setTab} />
         </>
       )}
 
@@ -1640,14 +1621,12 @@ export default function App() {
           onDelete={modal.mode === 'edit' ? handleDeleteEntry : null}
           onCancel={() => setModal(null)}
           priorLabels={priorLabels}
-          S={S}
-          th={th}
         />
       )}
 
-      {adminOpen && <AdminModal total={total} onReset={handleAdminReset} onNuke={handleAdminNuke} onClose={() => setAdminOpen(false)} S={S} />}
+      {adminOpen && <AdminModal total={total} onReset={handleAdminReset} onNuke={handleAdminNuke} onClose={() => setAdminOpen(false)} />}
 
-      {infoOpen && <RulesModal onClose={() => setInfoOpen(false)} S={S} />}
+      {infoOpen && <RulesModal onClose={() => setInfoOpen(false)} />}
     </div>
   )
 }
