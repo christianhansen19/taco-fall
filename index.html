@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Taco Fall</title>
-    <meta name="description" content="A real-time, multi-player taco-tallying scrapbook for the crew — locked Dec 9." />
-    <meta name="theme-color" content="#F1EAD7" />
+    <meta name="description" content="A real-time, multi-player taco-tallying scrapbook for the crew." />
+    <meta name="theme-color" content="#FBF3E7" />
 
     <link rel="icon" type="image/png" sizes="32x32" href="/taco-fall/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/taco-fall/apple-touch-icon.png" />
@@ -19,13 +19,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Rye&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+      /* Minimal render-blocking reset so a hard reload never flashes unstyled.
+         Everything else lives in src/styles/. */
       * {
         box-sizing: border-box;
       }
@@ -36,33 +38,27 @@
       }
       body {
         margin: 0;
-        font-family: 'Nunito', system-ui, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-        overscroll-behavior-y: none;
+        background: #fbf3e7;
       }
-
-      @keyframes bfall {
-        0% {
-          transform: translateY(-10vh) translateX(0) rotate(0deg);
-          opacity: 1;
-        }
-        100% {
-          transform: translateY(110vh) translateX(var(--sway, 0px)) rotate(360deg);
-          opacity: 0.9;
-        }
-      }
-      .bfall-emoji {
-        position: fixed;
-        top: 0;
-        pointer-events: none;
-        z-index: 9999;
-        animation-name: bfall;
-        animation-timing-function: linear;
-        animation-fill-mode: forwards;
+      html[data-theme='dark'] body {
+        background: #1e1517;
       }
     </style>
-    <script type="module" crossorigin src="/taco-fall/assets/index-CXN_4oFy.js"></script>
-    <link rel="stylesheet" crossorigin href="/taco-fall/assets/index-CXlvz8pP.css">
+
+    <script>
+      // Resolve the theme before React mounts, so a dark-mode user never gets a
+      // flash of cream. Mirrors the logic in src/theme.js.
+      ;(function () {
+        try {
+          var p = localStorage.getItem('tacoTheme_v2') || localStorage.getItem('tacoTheme_v1') || 'system'
+          var dark = p === 'dark' || (p === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          document.querySelector('meta[name="theme-color"]').content = dark ? '#1E1517' : '#FBF3E7'
+        } catch (e) {}
+      })()
+    </script>
+    <script type="module" crossorigin src="/taco-fall/assets/index-CFaVmHPo.js"></script>
+    <link rel="stylesheet" crossorigin href="/taco-fall/assets/index-BThkuhF_.css">
   </head>
   <body>
     <div id="root"></div>
