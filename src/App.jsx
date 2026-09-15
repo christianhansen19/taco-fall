@@ -973,7 +973,7 @@ function CountTab({ me, myKey, myPlayer, photoURL, locked, rank, playerCount, cr
 
 function BoardTab({ players, myKey, locked }) {
   const list = Object.entries(players)
-    .map(([key, p]) => ({ key, name: p.name, count: p.count || 0, entries: flattenEntries({ [key]: p }) }))
+    .map(([key, p]) => ({ key, name: p.name, photoURL: p.photoURL || null, count: p.count || 0, entries: flattenEntries({ [key]: p }) }))
     .sort((a, b) => b.count - a.count)
   const total = list.reduce((a, b) => a + b.count, 0)
   const top3 = list.slice(0, 3)
@@ -1003,7 +1003,7 @@ function BoardTab({ players, myKey, locked }) {
                   <div key={p.key} className="podium__col" data-rank={rank}>
                     <div className="podium__person">
                       <span className="podium__figure">
-                        <Avatar name={p.name} size={rank === 1 ? 46 : 38} />
+                        <Avatar name={p.name} photoURL={p.photoURL} size={rank === 1 ? 46 : 38} />
                         <span className="podium__medal">{medal}</span>
                       </span>
                       <span className="podium__name" title={p.name}>
@@ -1025,6 +1025,7 @@ function BoardTab({ players, myKey, locked }) {
           <div key={p.key} className="rank-row" data-mine={p.key === myKey || undefined}>
             <div className="rank-row__head">
               <span className="rank-row__pos">{i + 1}</span>
+              <Avatar name={p.name} photoURL={p.photoURL} size={30} />
               <span className="rank-row__name" title={p.name}>
                 {p.name}
               </span>
@@ -1137,7 +1138,7 @@ function StarsTab({ entries, players, myKey }) {
     .map(([key, p]) => {
       const es = Object.values(p.entries || {}).filter((e) => e.rating != null)
       if (es.length < 2) return null
-      return { key, name: p.name, avg: es.reduce((a, b) => a + b.rating, 0) / es.length, count: es.length }
+      return { key, name: p.name, photoURL: p.photoURL || null, avg: es.reduce((a, b) => a + b.rating, 0) / es.length, count: es.length }
     })
     .filter(Boolean)
     .sort((a, b) => b.avg - a.avg)
@@ -1183,7 +1184,8 @@ function StarsTab({ entries, players, myKey }) {
         {top5.map((e) => (
           <div key={e.id} className="diary-row" data-mine={e.playerKey === myKey || undefined}>
             <div className="rank-row__head">
-              <strong>
+              <Avatar name={e.playerName} photoURL={e.playerPhoto} size={26} />
+              <strong style={{ flex: 1, minWidth: 0 }}>
                 {e.playerName}
                 {e.qty > 1 && <span className="t-sub" style={{ marginLeft: 6 }}>×{e.qty}</span>}
               </strong>
@@ -1214,7 +1216,8 @@ function StarsTab({ entries, players, myKey }) {
         {perPlayer.length === 0 && <div className="t-sub">Not enough ratings yet.</div>}
         {perPlayer.map((p) => (
           <div key={p.key} className="critic-row">
-            <span>{p.name}</span>
+            <Avatar name={p.name} photoURL={p.photoURL} size={26} />
+            <span style={{ flex: 1, minWidth: 0 }}>{p.name}</span>
             <span className="t-sub">
               {p.avg.toFixed(1)}★ ({p.count})
             </span>
