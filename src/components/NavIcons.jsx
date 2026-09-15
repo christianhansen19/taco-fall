@@ -12,9 +12,12 @@ function Icon({ children }) {
 export function CountIcon() {
   return (
     <Icon>
-      {/* One closed path: filling scallops across the top, shell curving below.
-          A straight rim line here reads as a bowl at 23px. */}
-      <path d="M3.3 12.4Q6.2 7.7 9.1 12.4Q12 7.7 14.9 12.4Q17.8 7.7 20.7 12.4a8.7 8.7 0 0 1-17.4 0Z" />
+      {/* Folded shell seen side-on: domed back, flat base, lettuce frilling out
+          along the fold. A U-shape with filling on top reads as a bowl at 23px. */}
+      <path d="M2.9 17.4h18.2a9.1 9.1 0 0 0-18.2 0Z" />
+      <path d="M4.6 13.9q1.85-2.75 3.7 0 1.85-2.75 3.7 0 1.85-2.75 3.7 0 1.85-2.75 3.7 0" />
+      <path d="M8.6 16.1h.01" />
+      <path d="M12.2 16.6h.01" />
     </Icon>
   )
 }

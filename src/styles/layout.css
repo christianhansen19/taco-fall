@@ -85,7 +85,7 @@
 .content {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 22px var(--gutter) calc(110px + env(safe-area-inset-bottom));
+  padding: 22px var(--gutter) calc(128px + env(safe-area-inset-bottom));
 }
 
 .stack {
@@ -115,7 +115,7 @@
   display: grid;
   grid-template-columns: repeat(var(--nav-count), 1fr);
   width: 100%;
-  max-width: 340px;
+  max-width: 430px;
   padding: 7px;
   border-radius: var(--r-pill);
   background: var(--nav-bg);
@@ -193,7 +193,7 @@
   }
 
   .nav__bar {
-    max-width: 380px;
+    max-width: 460px;
   }
 }
 

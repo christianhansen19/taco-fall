@@ -117,15 +117,15 @@
 /* The floating nav reads as a control layer above the page, so it keeps its own
    dark glass in both themes rather than following the surface tokens. */
 :root {
-  --nav-bg: rgba(38, 24, 21, 0.82);
+  --nav-bg: rgba(35, 21, 19, 0.93);
   --nav-fg: #fdf6ec;
-  --nav-border: rgba(255, 255, 255, 0.12);
-  --nav-pill: rgba(255, 255, 255, 0.16);
+  --nav-border: rgba(255, 255, 255, 0.13);
+  --nav-pill: rgba(255, 255, 255, 0.17);
 }
 
 :root[data-theme='dark'] {
-  --nav-bg: rgba(58, 44, 47, 0.8);
+  --nav-bg: rgba(56, 42, 45, 0.94);
   --nav-fg: #f7ede0;
-  --nav-border: rgba(255, 255, 255, 0.1);
-  --nav-pill: rgba(255, 255, 255, 0.14);
+  --nav-border: rgba(255, 255, 255, 0.11);
+  --nav-pill: rgba(255, 255, 255, 0.15);
 }

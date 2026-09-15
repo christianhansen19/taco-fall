@@ -79,7 +79,7 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bfall-emoji {
+  .confetti {
     display: none;
   }
   *,

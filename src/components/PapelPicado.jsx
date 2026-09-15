@@ -53,6 +53,24 @@ function Flag({ x, fill }) {
   )
 }
 
+// A single flag cut loose from the string, for the celebration burst.
+export function ConfettiFlag({ color }) {
+  return (
+    <svg viewBox="0 0 20 26" width="20" height="26" aria-hidden="true" focusable="false">
+      <rect x="0" y="0" width="20" height="19" fill={color} />
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={3.3 + i * 6.7} cy="19" r="3.3" fill={color} />
+      ))}
+      <circle cx="10" cy="5" r="1.5" fill="var(--bg)" />
+      <path d="M10 9l2.6 2.6L10 14.2 7.4 11.6Z" fill="var(--bg)" />
+      <circle cx="3.6" cy="11.6" r="1.1" fill="var(--bg)" />
+      <circle cx="16.4" cy="11.6" r="1.1" fill="var(--bg)" />
+    </svg>
+  )
+}
+
+export const CONFETTI_COLORS = COLORS
+
 export default function PapelPicado({ variant }) {
   // Two instances on one page must not share a pattern id.
   const id = `papel-${(uid = (uid + 1) % 1000)}`

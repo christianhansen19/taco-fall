@@ -7,7 +7,7 @@ import { auth, db, googleProvider, storage } from './firebase'
 import { applyEntries, clamp, entryQty, mergeEntry, QTY_MAX, QTY_MIN, removeLastUpdater, sumQty } from './lib/qty'
 import { DEMO, DEMO_USER, demoPlayers } from './lib/demo'
 import { THEME_ICON, THEME_LABEL, useTheme } from './theme'
-import PapelPicado from './components/PapelPicado'
+import PapelPicado, { ConfettiFlag, CONFETTI_COLORS } from './components/PapelPicado'
 import { CountIcon, ExploreIcon, FeedIcon, RanksIcon } from './components/NavIcons'
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,6 @@ const ADMIN_PW = 'ualumni'
 const NOTES_MAX = 280
 // Midnight ending Dec 9, 2026, Mountain time.
 const LOCK = new Date('2026-12-10T00:00:00-07:00')
-const FALL_EMOJIS = ['🌮', '🌮', '🌮', '🌮', '🌯', '🥑', '🌶️', '🧀', '🫓']
 const CTRL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
 
 // CARTO started requiring a key for raster basemaps in Aug 2026. Without one the
@@ -949,7 +948,6 @@ function BoardTab({ players, myKey, locked }) {
 
         {top3.length > 0 && (
           <>
-            <PapelPicado variant="divider" />
             <div className="podium">
               {[top3[1], top3[0], top3[2]].filter(Boolean).map((p) => {
                 const rank = p === top3[0] ? 1 : p === top3[1] ? 2 : 3
@@ -1367,7 +1365,6 @@ function RulesModal({ onClose }) {
         <ul style={{ lineHeight: 1.9, paddingLeft: 20, margin: '12px 0 0' }}>
           <li>You must be able to pick it up — no forks.</li>
           <li>Taco salads, taco bowls, and burritos do not count.</li>
-          <li>2 street-size tacos = 1 taco.</li>
           <li>Tostadas count if folded and eaten by hand.</li>
           <li>Any protein is fair game — traditional or fusion.</li>
           <li>Homemade tacos always count.</li>
@@ -1480,17 +1477,18 @@ export default function App() {
   }
 
   function triggerRain() {
-    const drops = Array.from({ length: 16 }).map((_, i) => ({
+    const drops = Array.from({ length: 22 }).map((_, i) => ({
       id: `${Date.now()}-${i}`,
-      emoji: FALL_EMOJIS[Math.floor(Math.random() * FALL_EMOJIS.length)],
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
       left: Math.random() * 100,
-      size: 20 + Math.random() * 18,
-      duration: 2.2 + Math.random() * 1.6,
-      sway: (Math.random() - 0.5) * 140,
-      delay: Math.random() * 0.3,
+      scale: 0.55 + Math.random() * 0.6,
+      duration: 2.4 + Math.random() * 1.8,
+      sway: (Math.random() - 0.5) * 180,
+      spin: (Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 360),
+      delay: Math.random() * 0.45,
     }))
     setRain(drops)
-    setTimeout(() => setRain([]), 4800)
+    setTimeout(() => setRain([]), 5200)
   }
 
   // In demo mode the same pure reducers run against local state instead of
@@ -1584,10 +1582,17 @@ export default function App() {
       {rain.map((r) => (
         <span
           key={r.id}
-          className="bfall-emoji"
-          style={{ left: `${r.left}%`, fontSize: r.size, animationDuration: `${r.duration}s`, animationDelay: `${r.delay}s`, '--sway': `${r.sway}px` }}
+          className="confetti"
+          style={{
+            left: `${r.left}%`,
+            animationDuration: `${r.duration}s`,
+            animationDelay: `${r.delay}s`,
+            '--sway': `${r.sway}px`,
+            '--spin': `${r.spin}deg`,
+            '--scale': String(r.scale),
+          }}
         >
-          {r.emoji}
+          <ConfettiFlag color={r.color} />
         </span>
       ))}
 
