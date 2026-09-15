@@ -10,6 +10,9 @@ export const DEMO_USER = {
   photoURL: null,
 }
 
+// The demo user stands in for the owner so the admin UI is reachable here.
+export const DEMO_ADMINS = { 'demo-chris': true, 'demo-elena': true }
+
 // Inline SVG so the demo renders identically offline.
 function photo(a, b) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="600" height="600" fill="url(#g)"/><text x="300" y="340" font-size="180" text-anchor="middle">🌮</text></svg>`

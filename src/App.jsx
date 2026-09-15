@@ -5,7 +5,7 @@ import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import L from 'leaflet'
 import { auth, db, googleProvider, storage } from './firebase'
 import { applyEntries, clamp, entryQty, mergeEntry, QTY_MAX, QTY_MIN, removeLastUpdater, sumQty } from './lib/qty'
-import { DEMO, DEMO_USER, demoPlayers } from './lib/demo'
+import { DEMO, DEMO_ADMINS, DEMO_USER, demoPlayers } from './lib/demo'
 import { THEME_ICON, THEME_LABEL, useTheme } from './theme'
 import PapelPicado, { ConfettiFlag, CONFETTI_COLORS } from './components/PapelPicado'
 import { CountIcon, ExploreIcon, FeedIcon, RanksIcon } from './components/NavIcons'
@@ -15,7 +15,11 @@ import { CountIcon, ExploreIcon, FeedIcon, RanksIcon } from './components/NavIco
 // ---------------------------------------------------------------------------
 
 const ROOT = 'tacos'
-const ADMIN_PW = 'ualumni'
+const ADMINS_ROOT = 'admins'
+// Permanent super-admin. Hardcoded rather than stored so it can never be
+// revoked by anyone — including by an admin this account later grants.
+// Security lives in the database rules; this only decides what the UI offers.
+const OWNER_UID = 'dPTOUckGbpW7vTDlZfQcxyKAeUk2'
 const NOTES_MAX = 280
 // Midnight ending Dec 9, 2026, Mountain time.
 const LOCK = new Date('2026-12-10T00:00:00-07:00')
@@ -673,75 +677,106 @@ function LogModal({ mode, initial, onSubmit, onDelete, onCancel, priorLabels }) 
 // Admin panel
 // ---------------------------------------------------------------------------
 
-function AdminModal({ total, onReset, onNuke, onClose }) {
-  const [pw, setPw] = useState('')
-  const [unlocked, setUnlocked] = useState(false)
-  const [confirmReset, setConfirmReset] = useState(false)
-  const [confirmNuke, setConfirmNuke] = useState(false)
+// A destructive action that has to be armed before it can fire, so the
+// irreversible button is never the one sitting under your thumb.
+function DangerAction({ label, description, confirmLabel, onConfirm, busy }) {
+  const [armed, setArmed] = useState(false)
+  return (
+    <div className="danger">
+      <div className="danger__text">
+        <div className="danger__label">{label}</div>
+        <div className="t-tiny">{description}</div>
+      </div>
+      {!armed ? (
+        <button className="btn btn--ghost btn--danger" onClick={() => setArmed(true)} disabled={busy}>
+          {label}
+        </button>
+      ) : (
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn--danger-solid" onClick={onConfirm} disabled={busy}>
+            {busy ? 'Working…' : confirmLabel}
+          </button>
+          <button className="btn btn--ghost" onClick={() => setArmed(false)} disabled={busy}>
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdminModal({ total, players, admins, isOwner, ownerKey, myKey, onSetAdmin, onReset, onNuke, onClose, busy, error }) {
+  const roster = Object.entries(players)
+    .map(([key, p]) => ({ key, name: p.name, photoURL: p.photoURL, count: p.count || 0 }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal__handle" />
-        <h2 className="modal__title">🔧 Admin</h2>
-        {!unlocked ? (
+        <h2 className="modal__title">Admin</h2>
+        <div className="t-sub">
+          {total} taco{total === 1 ? '' : 's'} across {roster.length} player{roster.length === 1 ? '' : 's'}.
+        </div>
+
+        {error && <div className="notice notice--error">{error}</div>}
+
+        {isOwner && (
           <>
-            <input
-              className="input"
-              style={{ marginTop: 12 }}
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && pw === ADMIN_PW && setUnlocked(true)}
-              placeholder="Password"
-            />
-            <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={() => pw === ADMIN_PW && setUnlocked(true)}>
-              Unlock
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="t-sub" style={{ marginTop: 10 }}>
-              {total} tacos logged across all players.
+            <span className="field-label">Who can administer</span>
+            <div className="t-tiny" style={{ marginBottom: 10 }}>
+              Admins can reset and delete data. Only you can change this list.
             </div>
-            <div style={{ marginTop: 16 }}>
-              {!confirmReset ? (
-                <button className="btn btn--ghost" onClick={() => setConfirmReset(true)}>
-                  Reset all counts to zero
-                </button>
-              ) : (
-                <span className="t-sub">
-                  Sure?{' '}
-                  <button className="btn-link btn-link--danger" onClick={onReset}>
-                    Yes, reset
-                  </button>{' '}
-                  <button className="btn-link" onClick={() => setConfirmReset(false)}>
-                    Cancel
-                  </button>
-                </span>
-              )}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              {!confirmNuke ? (
-                <button className="btn btn--ghost" onClick={() => setConfirmNuke(true)}>
-                  Remove all players &amp; counts
-                </button>
-              ) : (
-                <span className="t-sub">
-                  Sure?{' '}
-                  <button className="btn-link btn-link--danger" onClick={onNuke}>
-                    Yes, nuke everything
-                  </button>{' '}
-                  <button className="btn-link" onClick={() => setConfirmNuke(false)}>
-                    Cancel
-                  </button>
-                </span>
-              )}
+            <div className="admin-list">
+              {roster.map((p) => {
+                const owner = p.key === ownerKey
+                const admin = owner || !!admins[p.key]
+                return (
+                  <div key={p.key} className="admin-row">
+                    <Avatar name={p.name} photoURL={p.photoURL} size={32} />
+                    <div className="admin-row__name">
+                      {p.name}
+                      {p.key === myKey && <span className="t-tiny"> · you</span>}
+                    </div>
+                    {owner ? (
+                      <span className="tag">Owner</span>
+                    ) : (
+                      <button
+                        className={admin ? 'chip-btn chip-btn--on' : 'chip-btn'}
+                        onClick={() => onSetAdmin(p.key, !admin)}
+                        disabled={busy}
+                        aria-pressed={admin}
+                      >
+                        {admin ? 'Admin' : 'Make admin'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </>
         )}
-        <div style={{ marginTop: 18 }}>
-          <button className="btn btn--ghost btn--block" onClick={onClose}>
+
+        <span className="field-label">Danger zone</span>
+        <div className="stack" style={{ gap: 10 }}>
+          <DangerAction
+            label="Reset all counts"
+            description="Every player drops to zero and loses their logged tacos. Accounts stay."
+            confirmLabel="Yes, reset everyone"
+            onConfirm={onReset}
+            busy={busy}
+          />
+          <DangerAction
+            label="Delete everything"
+            description="Removes every player and all their data. This cannot be undone."
+            confirmLabel="Yes, delete it all"
+            onConfirm={onNuke}
+            busy={busy}
+          />
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <button className="btn btn--ghost btn--block btn--lg" onClick={onClose}>
             Close
           </button>
         </div>
@@ -754,7 +789,7 @@ function AdminModal({ total, onReset, onNuke, onClose }) {
 // Header
 // ---------------------------------------------------------------------------
 
-function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOpen }) {
+function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOpen, showAdmin }) {
   const { d, h, m, s } = splitTime(msLeft)
   return (
     <header className="header">
@@ -769,9 +804,11 @@ function Header({ themePref, onCycleTheme, locked, msLeft, onAdminOpen, onInfoOp
           <button className="btn btn--icon" onClick={onCycleTheme} aria-label={THEME_LABEL[themePref]} title={THEME_LABEL[themePref]}>
             {THEME_ICON[themePref]}
           </button>
-          <button className="btn btn--icon" onClick={onAdminOpen} aria-label="Admin">
-            🔧
-          </button>
+          {showAdmin && (
+            <button className="btn btn--icon" onClick={onAdminOpen} aria-label="Admin">
+              🔧
+            </button>
+          )}
         </div>
       </div>
       {!locked ? (
@@ -1396,6 +1433,10 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
   const [rain, setRain] = useState([])
+  const [admins, setAdmins] = useState({})
+  const [adminBusy, setAdminBusy] = useState(false)
+  const [adminError, setAdminError] = useState('')
+  const [writeError, setWriteError] = useState('')
 
   useEffect(() => {
     if (DEMO) {
@@ -1416,6 +1457,20 @@ export default function App() {
       return
     }
     return onValue(ref(db, ROOT), (snap) => setPlayers(snap.val() || {}))
+  }, [user])
+
+  // Who may administer. Read-only for everyone signed in; the rules are what
+  // actually enforce it, this just decides whether to offer the UI.
+  useEffect(() => {
+    if (DEMO) {
+      setAdmins(DEMO_ADMINS)
+      return
+    }
+    if (!user) {
+      setAdmins({})
+      return
+    }
+    return onValue(ref(db, ADMINS_ROOT), (snap) => setAdmins(snap.val() || {}))
   }, [user])
 
   // Keep the signed-in user's player node in sync with their Google profile.
@@ -1450,6 +1505,11 @@ export default function App() {
     return Array.from(set)
   }, [allEntries])
   const total = Object.values(players).reduce((a, p) => a + (p.count || 0), 0)
+  // DEMO stands the fixture user in for the owner so the full panel is reachable
+  // without the real account.
+  const ownerKey = DEMO ? DEMO_USER.uid : OWNER_UID
+  const isOwner = !!myKey && myKey === ownerKey
+  const isAdmin = isOwner || (!!myKey && !!admins[myKey])
   const myRank = useMemo(() => {
     const sorted = Object.entries(players).sort((a, b) => (b[1].count || 0) - (a[1].count || 0))
     const i = sorted.findIndex(([key]) => key === myKey)
@@ -1497,10 +1557,28 @@ export default function App() {
     setPlayers((prev) => ({ ...prev, [myKey]: updater(structuredClone(prev[myKey])) }))
   }
 
+  // Rules can refuse a write now, and a rejected transaction used to look
+  // exactly like a success: the sheet closed and the confetti fired anyway.
+  async function runWrite(fn) {
+    setWriteError('')
+    try {
+      await fn()
+      return true
+    } catch (err) {
+      console.error('Write failed', err)
+      setWriteError(
+        err?.code === 'PERMISSION_DENIED' || /permission/i.test(err?.message || '')
+          ? "You don't have permission to change that."
+          : "Couldn't save that — check your connection and try again.",
+      )
+      return false
+    }
+  }
+
   async function handleMinus() {
     if (!myKey || locked) return
     if (DEMO) return demoApply(removeLastUpdater)
-    await removeLastTaco(myKey)
+    await runWrite(() => removeLastTaco(myKey))
   }
 
   async function handleCreateSubmit(draft, photoFile) {
@@ -1521,7 +1599,8 @@ export default function App() {
         console.error('Photo upload failed', err)
       }
     }
-    await logTacoWithId(myKey, newId, { ts: Date.now(), ...draft, ...(photoUrl ? { photoUrl } : {}) })
+    const ok = await runWrite(() => logTacoWithId(myKey, newId, { ts: Date.now(), ...draft, ...(photoUrl ? { photoUrl } : {}) }))
+    if (!ok) return // leave the sheet open so the draft isn't lost
     setModal(null)
     triggerRain()
   }
@@ -1543,7 +1622,7 @@ export default function App() {
     // playerName/playerKey/id fields, which must never be written back to the DB.
     const id = modal.entry.id
     if (DEMO) demoApply((cur) => applyEntries(cur, (es) => mergeEntry(es, id, { ...draft, photoUrl })))
-    else await editTaco(myKey, id, { ...draft, photoUrl })
+    else if (!(await runWrite(() => editTaco(myKey, id, { ...draft, photoUrl })))) return
     setModal(null)
   }
 
@@ -1557,24 +1636,57 @@ export default function App() {
           return es
         }),
       )
-    } else {
-      await deleteTaco(myKey, id)
+    } else if (!(await runWrite(() => deleteTaco(myKey, id)))) {
+      return
     }
     setModal(null)
   }
 
-  async function handleAdminReset() {
-    const updates = {}
-    for (const key of Object.keys(players)) {
-      updates[`${ROOT}/${key}/count`] = 0
-      updates[`${ROOT}/${key}/entries`] = null
+  // Admin writes go through the rules now, so they can genuinely be refused.
+  async function runAdmin(fn) {
+    setAdminBusy(true)
+    setAdminError('')
+    try {
+      await fn()
+    } catch (err) {
+      console.error('Admin action failed', err)
+      setAdminError(
+        err?.code === 'PERMISSION_DENIED' || /permission/i.test(err?.message || '')
+          ? "You don't have permission for that."
+          : 'That failed — check your connection and try again.',
+      )
+    } finally {
+      setAdminBusy(false)
     }
-    await update(ref(db), updates)
   }
 
-  async function handleAdminNuke() {
-    await set(ref(db, ROOT), null)
+  function handleSetAdmin(uid, on) {
+    if (DEMO) {
+      setAdmins((prev) => {
+        const next = { ...prev }
+        if (on) next[uid] = true
+        else delete next[uid]
+        return next
+      })
+      return
+    }
+    runAdmin(() => set(ref(db, `${ADMINS_ROOT}/${uid}`), on ? true : null))
+  }
+
+  function handleAdminReset() {
+    runAdmin(async () => {
+      const updates = {}
+      for (const key of Object.keys(players)) {
+        updates[`${ROOT}/${key}/count`] = 0
+        updates[`${ROOT}/${key}/entries`] = null
+      }
+      await update(ref(db), updates)
+    })
+  }
+
+  function handleAdminNuke() {
     // The signed-in admin's node is re-created fresh by the profile-sync effect.
+    runAdmin(() => set(ref(db, ROOT), null))
   }
 
   return (
@@ -1614,9 +1726,18 @@ export default function App() {
             locked={locked}
             msLeft={LOCK.getTime() - now}
             onAdminOpen={() => setAdminOpen(true)}
+            showAdmin={isAdmin}
             onInfoOpen={() => setInfoOpen(true)}
           />
           <main className="content">
+            {writeError && (
+              <div className="notice notice--error" role="alert">
+                <span>{writeError}</span>
+                <button className="btn-link" onClick={() => setWriteError('')}>
+                  Dismiss
+                </button>
+              </div>
+            )}
             {tab === 'count' && (
               <CountTab
                 me={myName}
@@ -1651,7 +1772,25 @@ export default function App() {
         />
       )}
 
-      {adminOpen && <AdminModal total={total} onReset={handleAdminReset} onNuke={handleAdminNuke} onClose={() => setAdminOpen(false)} />}
+      {adminOpen && isAdmin && (
+        <AdminModal
+          total={total}
+          players={players}
+          admins={admins}
+          isOwner={isOwner}
+          ownerKey={ownerKey}
+          myKey={myKey}
+          onSetAdmin={handleSetAdmin}
+          onReset={handleAdminReset}
+          onNuke={handleAdminNuke}
+          onClose={() => {
+            setAdminOpen(false)
+            setAdminError('')
+          }}
+          busy={adminBusy}
+          error={adminError}
+        />
+      )}
 
       {infoOpen && <RulesModal onClose={() => setInfoOpen(false)} />}
     </div>

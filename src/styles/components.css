@@ -148,6 +148,116 @@
   border-color: var(--chili);
 }
 
+.chip-btn--on {
+  background: var(--chili-wash);
+  border-color: var(--chili);
+  color: var(--chili);
+}
+
+/* --- admin ---------------------------------------------------------- */
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.admin-row:last-child {
+  border-bottom: none;
+}
+
+.admin-row__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 14px;
+  overflow-wrap: break-word;
+}
+
+.tag {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--chili);
+  color: var(--on-chili);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-soft);
+}
+
+.danger__text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.danger__label {
+  font-weight: 800;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+
+.btn--danger {
+  color: var(--chili-deep);
+  border-color: var(--line-strong);
+}
+
+.btn--danger:hover:not(:disabled) {
+  border-color: var(--chili-deep);
+  background: var(--chili-wash);
+}
+
+.btn--danger-solid {
+  background: var(--chili-deep);
+  border-color: transparent;
+  color: var(--on-chili);
+}
+
+.btn--danger-solid:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notice--error {
+  background: var(--chili-wash);
+  border: 1px solid var(--chili);
+  color: var(--chili);
+}
+
 /* --- segmented control ---------------------------------------------- */
 
 .seg {
